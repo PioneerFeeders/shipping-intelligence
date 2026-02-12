@@ -1,0 +1,27 @@
+{
+  "name": "pioneer-feeders-shipping-intelligence",
+  "version": "1.0.0",
+  "description": "Shipping intelligence platform for Pioneer Feeders — single source of truth for shipments, orders, and UPS invoice reconciliation",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node src/db/migrate.js",
+    "seed": "node scripts/seed.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "csv-parse": "^5.5.0",
+    "dotenv": "^16.4.0",
+    "express": "^4.18.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "pg": "^8.12.0",
+    "pino": "^9.0.0",
+    "pino-pretty": "^11.0.0",
+    "uuid": "^9.0.0"
+  }
+}
