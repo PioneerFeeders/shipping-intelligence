@@ -98,10 +98,24 @@ function parseTrackingResponse(data, trackingNumber) {
   };
 
   try {
+    // Log raw response structure for debugging
+    logger.info({ 
+      trackingNumber, 
+      topKeys: Object.keys(data || {}),
+      raw: JSON.stringify(data).substring(0, 1000),
+    }, 'UPS tracking raw response');
+
     // The response structure varies between API versions
     // Try the REST API v1 structure first
     const shipment = data?.trackResponse?.shipment?.[0] || data?.TrackResponse?.Shipment;
     if (!shipment) {
+      // Check for warnings/errors in response (e.g., "no tracking info available")
+      const warnings = data?.trackResponse?.shipment?.[0]?.warnings || 
+                       data?.trackResponse?.warnings ||
+                       data?.response?.errors;
+      if (warnings) {
+        logger.info({ trackingNumber, warnings: JSON.stringify(warnings).substring(0, 500) }, 'UPS tracking warnings');
+      }
       logger.warn({ trackingNumber }, 'No shipment data in UPS tracking response');
       return result;
     }
@@ -176,7 +190,11 @@ function parseTrackingResponse(data, trackingNumber) {
 
     result.status = 'ok';
   } catch (parseErr) {
-    logger.error({ parseErr, trackingNumber }, 'Error parsing UPS tracking response');
+    logger.error({ 
+      parseErrMsg: parseErr?.message || String(parseErr), 
+      parseErrStack: parseErr?.stack,
+      trackingNumber,
+    }, 'Error parsing UPS tracking response');
     result.status = 'parse_error';
   }
 
