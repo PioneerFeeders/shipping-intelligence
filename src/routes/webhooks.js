@@ -121,6 +121,10 @@ async function processLabelCreatedV2(resourceUrl) {
 
       if (v1Shipment) {
         // We have full V1 data — use the existing processOneShipment flow
+        // But also pass through the Shopify order ID from V2 if we have it
+        if (label.external_order_id && !v1Shipment.externalOrderId) {
+          v1Shipment._shopifyOrderIdFromV2 = label.external_order_id;
+        }
         await processOneShipment(v1Shipment);
       } else {
         // Fallback: build from V2 data only
@@ -212,18 +216,30 @@ async function processOneShipment(ssShipment) {
   let shopifyOrderId = null;
 
   if (ssShipment.orderId) {
+    logger.info({ ssOrderId: ssShipment.orderId }, 'Fetching ShipStation order for Shopify linkage');
     ssOrder = await shipstationService.getOrder(ssShipment.orderId);
     
     if (ssOrder) {
       // Extract Shopify order ID from externalOrderId
       // ShipStation stores it as "6608984637748" or "6608984637748-7587786555700"
       const externalId = ssOrder.externalOrderId || ssOrder.advancedOptions?.customField1;
+      logger.info({ externalId, orderKey: ssOrder.orderKey }, 'ShipStation order external ID');
       if (externalId) {
         // Take just the order ID part (before any dash)
         shopifyOrderId = parseInt(externalId.split('-')[0]);
       }
+    } else {
+      logger.warn({ ssOrderId: ssShipment.orderId }, 'ShipStation getOrder returned null');
     }
   }
+
+  // Fallback: use external_order_id from V2 label if V1 didn't provide it
+  if (!shopifyOrderId && ssShipment._shopifyOrderIdFromV2) {
+    shopifyOrderId = parseInt(ssShipment._shopifyOrderIdFromV2);
+    logger.info({ shopifyOrderId }, 'Using Shopify order ID from V2 label data');
+  }
+
+  logger.info({ shopifyOrderId, hasOrder: !!ssOrder }, 'Shopify order ID resolution');
 
   // Determine if Chewy order
   const orderNumber = ssShipment.orderNumber || ssOrder?.orderNumber;
