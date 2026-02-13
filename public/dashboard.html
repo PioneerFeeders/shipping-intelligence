@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pioneer Feeders — Operations Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-card: #131a2b;
+      --bg-card-hover: #1a2236;
+      --border: #1e293b;
+      --border-light: #2d3a52;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-blue: #38bdf8;
+      --accent-purple: #818cf8;
+      --accent-green: #34d399;
+      --accent-amber: #fbbf24;
+      --accent-red: #f87171;
+      --accent-pink: #f472b6;
+      --accent-teal: #2dd4bf;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+    .header-left { display: flex; align-items: center; gap: 24px; }
+    .brand {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .brand span { color: var(--accent-blue); }
+    .header-nav { display: flex; gap: 4px; }
+    .nav-btn {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .nav-btn.active {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.2);
+      color: var(--accent-blue);
+    }
+
+    /* Date picker */
+    .date-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .date-input {
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      outline: none;
+    }
+    .date-input:focus { border-color: var(--accent-blue); }
+    .date-preset {
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .date-preset:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+    .date-preset.active { background: rgba(56,189,248,0.1); border-color: var(--accent-blue); color: var(--accent-blue); }
+
+    /* Main layout */
+    .main { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+
+    /* Section */
+    .section { display: none; }
+    .section.active { display: block; }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Cards grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: var(--border-light); }
+    .stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+    }
+    .stat-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    /* Chart containers */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+    .chart-wrap { position: relative; height: 280px; }
+
+    /* Table */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(30,41,59,0.5);
+      color: var(--text-secondary);
+    }
+    tr:hover td { color: var(--text-primary); }
+    .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+    /* Badge */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-green { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+    .badge-amber { background: rgba(251,191,36,0.15); color: var(--accent-amber); }
+    .badge-red { background: rgba(248,113,113,0.15); color: var(--accent-red); }
+    .badge-blue { background: rgba(56,189,248,0.15); color: var(--accent-blue); }
+    .badge-purple { background: rgba(129,140,248,0.15); color: var(--accent-purple); }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      color: var(--text-muted);
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
+      .main { padding: 16px; }
+      .charts-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .date-controls { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="brand">Pioneer <span>Feeders</span></div>
+      <div class="header-nav">
+        <button class="nav-btn active" onclick="showSection('sales', this)">Sales</button>
+        <button class="nav-btn" onclick="showSection('shipping', this)">Shipping</button>
+        <button class="nav-btn" onclick="showSection('breeding', this)">Breeding</button>
+      </div>
+    </div>
+    <div class="date-controls">
+      <button class="date-preset active" onclick="setPreset('7d', this)">7D</button>
+      <button class="date-preset" onclick="setPreset('14d', this)">14D</button>
+      <button class="date-preset" onclick="setPreset('30d', this)">30D</button>
+      <button class="date-preset" onclick="setPreset('90d', this)">90D</button>
+      <input type="date" class="date-input" id="startDate">
+      <span style="color:var(--text-muted)">→</span>
+      <input type="date" class="date-input" id="endDate">
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- SALES SECTION -->
+    <div class="section active" id="sec-sales">
+      <div class="section-title"><span class="dot" style="background:var(--accent-blue)"></span> Sales Overview</div>
+      <div id="sales-loading" class="loading"><div class="spinner"></div>Loading sales data...</div>
+      <div id="sales-content" style="display:none">
+        <div class="stats-grid" id="sales-stats"></div>
+        <div class="charts-row">
+          <div class="chart-card full">
+            <div class="chart-title">Daily Revenue & Cups Sold</div>
+            <div class="chart-wrap"><canvas id="chart-daily-sales"></canvas></div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-title">Revenue by Channel</div>
+            <div class="chart-wrap"><canvas id="chart-channel"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Cups Sold by Type</div>
+            <div class="chart-wrap"><canvas id="chart-cups"></canvas></div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-title">Wholesale vs Retail</div>
+            <div class="chart-wrap"><canvas id="chart-tier"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Cups by Product Type</div>
+            <div class="chart-wrap"><canvas id="chart-product-cups"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHIPPING SECTION -->
+    <div class="section" id="sec-shipping">
+      <div class="section-title"><span class="dot" style="background:var(--accent-purple)"></span> Shipping Intelligence</div>
+      <div id="shipping-loading" class="loading"><div class="spinner"></div>Loading shipping data...</div>
+      <div id="shipping-content" style="display:none">
+        <div class="stats-grid" id="shipping-stats"></div>
+        <div class="charts-row">
+          <div class="chart-card full">
+            <div class="chart-title">Daily Shipping Cost & Shipments</div>
+            <div class="chart-wrap"><canvas id="chart-daily-shipping"></canvas></div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-title">Cost by Service</div>
+            <div class="chart-wrap"><canvas id="chart-service"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Shipments by State</div>
+            <div class="chart-wrap"><canvas id="chart-state"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BREEDING SECTION -->
+    <div class="section" id="sec-breeding">
+      <div class="section-title"><span class="dot" style="background:var(--accent-green)"></span> Breeding Operations</div>
+      <div id="breeding-loading" class="loading"><div class="spinner"></div>Loading breeding data...</div>
+      <div id="breeding-content" style="display:none">
+        <div class="stats-grid" id="breeding-stats"></div>
+        <div class="charts-row">
+          <div class="chart-card full">
+            <div class="chart-title">Daily Egg Collection</div>
+            <div class="chart-wrap"><canvas id="chart-eggs"></canvas></div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card full">
+            <div class="chart-title">Daily Pre-Pupae Collection & Mortality</div>
+            <div class="chart-wrap"><canvas id="chart-prepupae"></canvas></div>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-bottom:24px">
+          <div class="chart-title">Mortality Rate by Shelf</div>
+          <div class="chart-wrap" style="height:350px"><canvas id="chart-shelf-mortality"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // STATE
+    // ============================================================
+    let currentSection = 'sales';
+    let startDate, endDate;
+    const charts = {};
+
+    // Chart.js defaults
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = '#1e293b';
+    Chart.defaults.font.family = "'DM Sans', sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.plugins.legend.labels.boxWidth = 12;
+    Chart.defaults.plugins.legend.labels.padding = 16;
+
+    // ============================================================
+    // DATE MANAGEMENT
+    // ============================================================
+    function setPreset(preset, el) {
+      const end = new Date();
+      let start = new Date();
+      const days = parseInt(preset);
+      start.setDate(end.getDate() - days + 1);
+
+      startDate = fmt(start);
+      endDate = fmt(end);
+      document.getElementById('startDate').value = startDate;
+      document.getElementById('endDate').value = endDate;
+
+      document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+      if (el) el.classList.add('active');
+      refreshData();
+    }
+
+    function fmt(d) {
+      return d.toISOString().split('T')[0];
+    }
+
+    document.getElementById('startDate').addEventListener('change', () => {
+      startDate = document.getElementById('startDate').value;
+      document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+      refreshData();
+    });
+    document.getElementById('endDate').addEventListener('change', () => {
+      endDate = document.getElementById('endDate').value;
+      document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+      refreshData();
+    });
+
+    // ============================================================
+    // NAVIGATION
+    // ============================================================
+    function showSection(name, el) {
+      currentSection = name;
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.getElementById(`sec-${name}`).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      if (el) el.classList.add('active');
+      refreshData();
+    }
+
+    // ============================================================
+    // API CALLS
+    // ============================================================
+    async function api(path) {
+      const res = await fetch(`/dashboard/api${path}`);
+      if (res.status === 401) { window.location.reload(); return null; }
+      return res.json();
+    }
+
+    // ============================================================
+    // REFRESH
+    // ============================================================
+    async function refreshData() {
+      if (currentSection === 'sales') await loadSales();
+      else if (currentSection === 'shipping') await loadShipping();
+      else if (currentSection === 'breeding') await loadBreeding();
+    }
+
+    // ============================================================
+    // SALES
+    // ============================================================
+    async function loadSales() {
+      show('sales-loading'); hide('sales-content');
+      try {
+        const [summary, daily] = await Promise.all([
+          api(`/sales/summary?start_date=${startDate}&end_date=${endDate}`),
+          api(`/sales/daily?start_date=${startDate}&end_date=${endDate}`),
+        ]);
+
+        if (!summary) return;
+
+        // Stats cards
+        const retailRev = summary.byTier['tier-retail']?.revenue || 0;
+        const wholesaleRev = summary.byTier['tier-wholesale']?.revenue || 0;
+        const retailPct = summary.totalRevenue > 0 ? ((retailRev / summary.totalRevenue) * 100).toFixed(0) : 0;
+
+        document.getElementById('sales-stats').innerHTML = `
+          ${statCard('Total Revenue', '$' + n(summary.totalRevenue), `${summary.totalOrders} orders`, '--accent-blue')}
+          ${statCard('Wholesale', '$' + n(wholesaleRev), `${summary.byTier['tier-wholesale']?.orders || 0} orders`, '--accent-purple')}
+          ${statCard('Retail', '$' + n(retailRev), `${retailPct}% of total`, '--accent-teal')}
+          ${statCard('Total Cups Sold', n(summary.cupsSold.total, 0), `HW: ${summary.cupsSold.hornworm} · SW: ${summary.cupsSold.silkworm}`, '--accent-amber')}
+          ${statCard('Hornworm Cups', n(summary.cupsSold.hornworm, 0), 'physical cups', '--accent-red')}
+          ${statCard('Silkworm Cups', n(summary.cupsSold.silkworm, 0), 'physical cups', '--accent-green')}
+        `;
+
+        // Daily chart
+        if (daily && daily.length) {
+          makeChart('chart-daily-sales', 'bar', {
+            labels: daily.map(d => shortDate(d.date)),
+            datasets: [
+              { label: 'Revenue', data: daily.map(d => d.revenue), backgroundColor: 'rgba(56,189,248,0.6)', borderRadius: 4, yAxisID: 'y', order: 2 },
+              { label: 'Cups', data: daily.map(d => d.cups), type: 'line', borderColor: '#fbbf24', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, yAxisID: 'y1', order: 1 },
+            ]
+          }, { y: { position: 'left', title: { display: true, text: 'Revenue ($)' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Cups' } } });
+        }
+
+        // Channel chart
+        const channels = Object.entries(summary.byChannel).filter(([,v]) => v.revenue > 0);
+        if (channels.length) {
+          const channelColors = { retail: '#38bdf8', wholesale: '#818cf8', chewy: '#f472b6', 'amazon-pioneer': '#fbbf24', 'amazon-upnorth': '#fb923c', ebay: '#34d399', tradeshow: '#94a3b8' };
+          makeChart('chart-channel', 'doughnut', {
+            labels: channels.map(([k]) => channelLabel(k)),
+            datasets: [{ data: channels.map(([,v]) => v.revenue), backgroundColor: channels.map(([k]) => channelColors[k] || '#64748b'), borderWidth: 0 }]
+          }, {}, { cutout: '65%' });
+        }
+
+        // Cups by type chart
+        const cupTypes = Object.entries(summary.byProductType).filter(([,v]) => v.cups > 0);
+        if (cupTypes.length) {
+          const typeColors = { 'hornworm-cup': '#f87171', 'silkworm-cup': '#34d399', 'waxworm-cup': '#fbbf24', 'superworm-cup': '#fb923c', 'mealworm-cup': '#818cf8', 'bsfl-cup': '#2dd4bf' };
+          makeChart('chart-cups', 'doughnut', {
+            labels: cupTypes.map(([k]) => k.replace('-cup', '').replace('-', ' ')),
+            datasets: [{ data: cupTypes.map(([,v]) => v.cups), backgroundColor: cupTypes.map(([k]) => typeColors[k] || '#64748b'), borderWidth: 0 }]
+          }, {}, { cutout: '65%' });
+        }
+
+        // Tier chart
+        makeChart('chart-tier', 'bar', {
+          labels: ['Wholesale', 'Retail'],
+          datasets: [
+            { label: 'Revenue', data: [wholesaleRev, retailRev], backgroundColor: ['rgba(129,140,248,0.7)', 'rgba(45,212,191,0.7)'], borderRadius: 6 },
+          ]
+        }, { y: { beginAtZero: true }, x: {} }, { indexAxis: 'y' });
+
+        // Product cups bar chart
+        if (cupTypes.length) {
+          const typeColors2 = { 'hornworm-cup': 'rgba(248,113,113,0.7)', 'silkworm-cup': 'rgba(52,211,153,0.7)', 'waxworm-cup': 'rgba(251,191,36,0.7)', 'superworm-cup': 'rgba(251,146,60,0.7)', 'mealworm-cup': 'rgba(129,140,248,0.7)', 'bsfl-cup': 'rgba(45,212,191,0.7)' };
+          makeChart('chart-product-cups', 'bar', {
+            labels: cupTypes.map(([k]) => k.replace('-cup', '')),
+            datasets: [{ label: 'Cups', data: cupTypes.map(([,v]) => v.cups), backgroundColor: cupTypes.map(([k]) => typeColors2[k] || 'rgba(100,116,139,0.7)'), borderRadius: 6 }]
+          });
+        }
+
+        hide('sales-loading'); show('sales-content');
+      } catch (err) {
+        console.error('Sales load error:', err);
+        document.getElementById('sales-loading').innerHTML = '<div style="color:var(--accent-red)">Failed to load sales data</div>';
+      }
+    }
+
+    // ============================================================
+    // SHIPPING
+    // ============================================================
+    async function loadShipping() {
+      show('shipping-loading'); hide('shipping-content');
+      try {
+        const [summary, daily, byService, byState] = await Promise.all([
+          api(`/shipping/summary?start_date=${startDate}&end_date=${endDate}`),
+          api(`/shipping/daily?start_date=${startDate}&end_date=${endDate}`),
+          api(`/shipping/by-service?start_date=${startDate}&end_date=${endDate}`),
+          api(`/shipping/by-state?start_date=${startDate}&end_date=${endDate}`),
+        ]);
+
+        if (!summary) return;
+
+        const margin = parseFloat(summary.total_revenue) - parseFloat(summary.total_label_cost) - parseFloat(summary.total_cogs);
+
+        document.getElementById('shipping-stats').innerHTML = `
+          ${statCard('Shipments', n(summary.total_shipments, 0), `${summary.total_orders} orders`, '--accent-purple')}
+          ${statCard('Label Cost', '$' + n(summary.total_label_cost), 'avg $' + n(summary.avg_label_cost), '--accent-red')}
+          ${statCard('Revenue', '$' + n(summary.total_revenue), 'from shipped orders', '--accent-blue')}
+          ${statCard('Margin', '$' + n(margin), 'rev - cost - cogs', margin >= 0 ? '--accent-green' : '--accent-red')}
+          ${statCard('Delivered', n(summary.delivered, 0), `${summary.in_transit} in transit`, '--accent-green')}
+          ${statCard('Late / Exceptions', n(summary.late_deliveries, 0) + ' / ' + n(summary.exceptions, 0), '', '--accent-amber')}
+        `;
+
+        // Daily shipping chart
+        if (daily && daily.length) {
+          makeChart('chart-daily-shipping', 'bar', {
+            labels: daily.map(d => shortDate(d.date)),
+            datasets: [
+              { label: 'Label Cost', data: daily.map(d => parseFloat(d.label_cost)), backgroundColor: 'rgba(129,140,248,0.6)', borderRadius: 4, yAxisID: 'y' },
+              { label: 'Shipments', data: daily.map(d => parseInt(d.shipments)), type: 'line', borderColor: '#38bdf8', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, yAxisID: 'y1' },
+            ]
+          }, { y: { position: 'left', title: { display: true, text: 'Cost ($)' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Shipments' } } });
+        }
+
+        // Service breakdown
+        if (byService && byService.length) {
+          const svcColors = ['rgba(56,189,248,0.7)', 'rgba(129,140,248,0.7)', 'rgba(244,114,182,0.7)', 'rgba(251,191,36,0.7)', 'rgba(52,211,153,0.7)'];
+          makeChart('chart-service', 'doughnut', {
+            labels: byService.map(s => s.service_code?.replace('ups_', '').replace(/_/g, ' ') || 'unknown'),
+            datasets: [{ data: byService.map(s => parseFloat(s.total_cost)), backgroundColor: svcColors, borderWidth: 0 }]
+          }, {}, { cutout: '65%' });
+        }
+
+        // State breakdown
+        if (byState && byState.length) {
+          const top10 = byState.slice(0, 10);
+          makeChart('chart-state', 'bar', {
+            labels: top10.map(s => s.state),
+            datasets: [{ label: 'Shipments', data: top10.map(s => parseInt(s.shipments)), backgroundColor: 'rgba(45,212,191,0.6)', borderRadius: 4 }]
+          });
+        }
+
+        hide('shipping-loading'); show('shipping-content');
+      } catch (err) {
+        console.error('Shipping load error:', err);
+        document.getElementById('shipping-loading').innerHTML = '<div style="color:var(--accent-red)">Failed to load shipping data</div>';
+      }
+    }
+
+    // ============================================================
+    // BREEDING
+    // ============================================================
+    async function loadBreeding() {
+      show('breeding-loading'); hide('breeding-content');
+      try {
+        const [eggs, prepupae] = await Promise.all([
+          api(`/breeding/eggs?start_date=${startDate}&end_date=${endDate}`),
+          api(`/breeding/prepupae?start_date=${startDate}&end_date=${endDate}`),
+        ]);
+
+        if (!eggs) return;
+
+        document.getElementById('breeding-stats').innerHTML = `
+          ${statCard('Total Eggs', n(eggs.summary.total_eggs, 0), `${eggs.summary.total_collections} collections`, '--accent-green')}
+          ${statCard('Egg Weight', n(eggs.summary.total_weight, 1) + 'g', 'avg ' + n(eggs.summary.avg_weight, 1) + 'g/day', '--accent-teal')}
+          ${statCard('Pre-Pupae Collected', n(prepupae.summary.total_collected, 0), `${prepupae.summary.total_entries} entries`, '--accent-amber')}
+          ${statCard('Mortality Rate', n(prepupae.summary.mortality_rate, 1) + '%', n(prepupae.summary.total_dead, 0) + ' dead', parseFloat(prepupae.summary.mortality_rate) > 10 ? '--accent-red' : '--accent-green')}
+        `;
+
+        // Eggs daily chart
+        if (eggs.daily && eggs.daily.length) {
+          makeChart('chart-eggs', 'bar', {
+            labels: eggs.daily.map(d => shortDate(d.date)),
+            datasets: [
+              { label: 'Eggs', data: eggs.daily.map(d => parseInt(d.total_eggs)), backgroundColor: 'rgba(52,211,153,0.6)', borderRadius: 4, yAxisID: 'y' },
+              { label: 'Weight (g)', data: eggs.daily.map(d => parseFloat(d.total_weight)), type: 'line', borderColor: '#2dd4bf', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, yAxisID: 'y1' },
+            ]
+          }, { y: { position: 'left', title: { display: true, text: 'Egg Count' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Weight (g)' } } });
+        }
+
+        // Pre-pupae daily
+        if (prepupae.daily && prepupae.daily.length) {
+          makeChart('chart-prepupae', 'bar', {
+            labels: prepupae.daily.map(d => shortDate(d.date)),
+            datasets: [
+              { label: 'Alive', data: prepupae.daily.map(d => parseInt(d.total_alive)), backgroundColor: 'rgba(251,191,36,0.6)', borderRadius: 4 },
+              { label: 'Dead', data: prepupae.daily.map(d => parseInt(d.total_dead)), backgroundColor: 'rgba(248,113,113,0.6)', borderRadius: 4 },
+            ]
+          }, { x: { stacked: true }, y: { stacked: true } });
+        }
+
+        // Shelf mortality
+        if (prepupae.byShelf && prepupae.byShelf.length) {
+          makeChart('chart-shelf-mortality', 'bar', {
+            labels: prepupae.byShelf.map(s => 'S' + s.shelf_number),
+            datasets: [
+              { label: 'Collected', data: prepupae.byShelf.map(s => parseInt(s.total_collected)), backgroundColor: 'rgba(251,191,36,0.5)', borderRadius: 3 },
+              { label: 'Dead', data: prepupae.byShelf.map(s => parseInt(s.total_dead)), backgroundColor: 'rgba(248,113,113,0.7)', borderRadius: 3 },
+            ]
+          });
+        }
+
+        hide('breeding-loading'); show('breeding-content');
+      } catch (err) {
+        console.error('Breeding load error:', err);
+        document.getElementById('breeding-loading').innerHTML = '<div style="color:var(--accent-red)">Failed to load breeding data</div>';
+      }
+    }
+
+    // ============================================================
+    // CHART HELPERS
+    // ============================================================
+    function makeChart(id, type, data, scaleOpts = {}, extraOpts = {}) {
+      if (charts[id]) charts[id].destroy();
+      const ctx = document.getElementById(id)?.getContext('2d');
+      if (!ctx) return;
+
+      const isDoughnut = type === 'doughnut';
+      charts[id] = new Chart(ctx, {
+        type,
+        data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { intersect: false, mode: isDoughnut ? 'nearest' : 'index' },
+          plugins: {
+            legend: { display: true, position: isDoughnut ? 'right' : 'top' },
+            tooltip: {
+              backgroundColor: '#131a2b',
+              borderColor: '#1e293b',
+              borderWidth: 1,
+              titleColor: '#e2e8f0',
+              bodyColor: '#94a3b8',
+              padding: 12,
+              cornerRadius: 8,
+              callbacks: isDoughnut ? {} : {
+                label: function(ctx) {
+                  let val = ctx.parsed?.y ?? ctx.parsed;
+                  if (typeof val === 'number') {
+                    if (ctx.dataset.label?.includes('Revenue') || ctx.dataset.label?.includes('Cost') || ctx.dataset.label?.includes('Margin'))
+                      val = '$' + val.toFixed(2);
+                    else if (ctx.dataset.label?.includes('Weight'))
+                      val = val.toFixed(1) + 'g';
+                  }
+                  return ctx.dataset.label + ': ' + val;
+                }
+              }
+            },
+          },
+          scales: isDoughnut ? {} : scaleOpts,
+          ...extraOpts,
+        },
+      });
+    }
+
+    // ============================================================
+    // UTILITY
+    // ============================================================
+    function statCard(label, value, sub, colorVar) {
+      return `<div class="stat-card">
+        <div class="stat-label">${label}</div>
+        <div class="stat-value" style="color:var(${colorVar})">${value}</div>
+        ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
+      </div>`;
+    }
+
+    function n(val, decimals = 2) {
+      const num = parseFloat(val) || 0;
+      if (decimals === 0) return Math.round(num).toLocaleString();
+      return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    function shortDate(d) {
+      const parts = d.split('-');
+      return parseInt(parts[1]) + '/' + parseInt(parts[2]);
+    }
+
+    function channelLabel(ch) {
+      const labels = { retail: 'Website', wholesale: 'Wholesale', chewy: 'Chewy', 'amazon-pioneer': 'Amazon (Pioneer)', 'amazon-upnorth': 'Amazon (UP North)', ebay: 'eBay', tradeshow: 'Trade Show' };
+      return labels[ch] || ch;
+    }
+
+    function show(id) { document.getElementById(id).style.display = ''; }
+    function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    (function init() {
+      const btn = document.querySelector('.date-preset.active');
+      setPreset('7d', btn);
+    })();
+  </script>
+</body>
+</html>
