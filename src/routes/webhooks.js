@@ -71,6 +71,9 @@ async function processShipNotify(resourceUrl) {
 /**
  * Process a V2 LABEL_CREATED_V2 webhook.
  * The resource_url points to the V2 labels endpoint.
+ * 
+ * Strategy: Get the tracking number from V2, then use V1 API to get full
+ * shipment details (since V1 has richer data including order linkage).
  */
 async function processLabelCreatedV2(resourceUrl) {
   const labels = await shipstationService.fetchLabelsFromV2Webhook(resourceUrl);
@@ -78,62 +81,86 @@ async function processLabelCreatedV2(resourceUrl) {
 
   for (const label of labels) {
     try {
-      // Normalize V2 label to the same shape processOneShipment expects
-      const normalized = {
-        shipmentId: label.label_id || label.shipment_id,
-        labelId: label.label_id,
-        trackingNumber: label.tracking_number,
-        carrierCode: label.carrier_code,
-        serviceCode: label.service_code,
-        shipDate: label.ship_date || label.created_at,
-        voided: label.voided || label.is_voided || false,
-        shipmentCost: label.shipment_cost?.amount || label.insurance_cost?.amount || 0,
-        orderNumber: null,
-        orderId: null,
-        weight: label.weight || {},
-        dimensions: label.dimensions || label.package_dimensions || {},
-        shipTo: label.ship_to || {},
-      };
+      // Log the full V2 label structure so we can see what's available
+      logger.info({ v2Label: JSON.stringify(label).substring(0, 2000) }, 'V2 label raw data');
 
-      // V2 labels include shipment_id — use it to look up the shipment's order
-      if (label.shipment_id) {
-        try {
-          const v2Shipment = await shipstationService.getV2Shipment(label.shipment_id);
-          if (v2Shipment) {
-            normalized.orderId = v2Shipment.order_id || v2Shipment.orderId;
-            normalized.orderNumber = v2Shipment.order_number || v2Shipment.orderNumber;
-            // Pull weight/dimensions from shipment if label doesn't have them
-            if (!normalized.weight?.value && v2Shipment.weight) {
-              normalized.weight = v2Shipment.weight;
-            }
-            if (!normalized.dimensions?.length && v2Shipment.dimensions) {
-              normalized.dimensions = v2Shipment.dimensions;
-            }
-            if (!normalized.shipTo?.name && v2Shipment.ship_to) {
-              normalized.shipTo = v2Shipment.ship_to;
-            }
-          }
-        } catch (err) {
-          logger.warn({ err, shipmentId: label.shipment_id }, 'Could not fetch V2 shipment details');
-        }
+      const trackingNumber = label.tracking_number;
+      if (!trackingNumber) {
+        logger.warn({ labelId: label.label_id }, 'V2 label has no tracking number, skipping');
+        continue;
       }
 
-      // Now we need the ShipStation V1 order to get the Shopify external order ID
-      // V2 doesn't always expose external_order_id the same way
-      // Try to find the order via V1 using the order number
-      if (normalized.orderNumber && !normalized.orderId) {
-        try {
-          // Search V1 orders by orderNumber
-          const v1Orders = await shipstationService.searchOrdersByNumber(normalized.orderNumber);
-          if (v1Orders && v1Orders.length > 0) {
-            normalized.orderId = v1Orders[0].orderId;
-          }
-        } catch (err) {
-          logger.warn({ err, orderNumber: normalized.orderNumber }, 'Could not find V1 order by number');
-        }
+      // Check if voided
+      if (label.voided || label.is_voided) {
+        logger.info({ trackingNumber }, 'V2 label is voided, skipping');
+        await shipmentModel.markVoided(trackingNumber);
+        continue;
       }
 
-      await processOneShipment(normalized);
+      // Strategy: Use V1 API to find shipment by tracking number
+      // This gives us the full order linkage, dimensions, weight, etc.
+      logger.info({ trackingNumber }, 'Looking up shipment in V1 API by tracking number');
+      
+      let v1Shipment = null;
+      try {
+        const v1Results = await shipstationService.listShipments({
+          trackingNumber: trackingNumber,
+        });
+        const v1Shipments = v1Results.shipments || [];
+        if (v1Shipments.length > 0) {
+          v1Shipment = v1Shipments[0];
+          logger.info({
+            trackingNumber,
+            orderId: v1Shipment.orderId,
+            orderNumber: v1Shipment.orderNumber,
+          }, 'Found shipment in V1 API');
+        }
+      } catch (err) {
+        logger.warn({ err, trackingNumber }, 'V1 shipment lookup failed');
+      }
+
+      if (v1Shipment) {
+        // We have full V1 data — use the existing processOneShipment flow
+        await processOneShipment(v1Shipment);
+      } else {
+        // Fallback: build from V2 data only
+        logger.info({ trackingNumber }, 'No V1 shipment found, using V2 data only');
+        
+        const normalized = {
+          shipmentId: label.label_id || label.shipment_id,
+          labelId: label.label_id,
+          trackingNumber,
+          carrierCode: label.carrier_code,
+          serviceCode: label.service_code,
+          shipDate: label.ship_date || label.created_at,
+          voided: false,
+          shipmentCost: label.shipment_cost?.amount || label.charge?.amount || 0,
+          orderNumber: null,
+          orderId: null,
+          weight: label.weight || label.package_weight || {},
+          dimensions: label.dimensions || label.package_dimensions || {},
+          shipTo: label.ship_to || {},
+        };
+
+        // Try V2 shipment endpoint for more details
+        if (label.shipment_id) {
+          try {
+            const v2Shipment = await shipstationService.getV2Shipment(label.shipment_id);
+            if (v2Shipment) {
+              logger.info({ v2Shipment: JSON.stringify(v2Shipment).substring(0, 2000) }, 'V2 shipment raw data');
+              normalized.orderId = v2Shipment.order_id || v2Shipment.orderId;
+              normalized.orderNumber = v2Shipment.order_number || v2Shipment.orderNumber;
+              if (!normalized.weight?.value && v2Shipment.weight) normalized.weight = v2Shipment.weight;
+              if (!normalized.dimensions?.length && v2Shipment.dimensions) normalized.dimensions = v2Shipment.dimensions;
+              if (!normalized.shipTo?.name && v2Shipment.ship_to) normalized.shipTo = v2Shipment.ship_to;
+            }
+          } catch (err) {
+            logger.warn({ err, shipmentId: label.shipment_id }, 'V2 shipment lookup failed');
+          }
+        }
+
+        await processOneShipment(normalized);
+      }
     } catch (err) {
       logger.error({
         err,
@@ -166,9 +193,12 @@ async function processOneShipment(ssShipment) {
 
   // Check if we already processed this shipment
   const existing = await shipmentModel.findByTrackingNumber(trackingNumber);
-  if (existing && !existing.is_voided) {
-    logger.info({ trackingNumber }, 'Shipment already exists, skipping');
+  if (existing && !existing.is_voided && existing.order_id) {
+    logger.info({ trackingNumber }, 'Shipment already exists with order linked, skipping');
     return;
+  }
+  if (existing && !existing.is_voided && !existing.order_id) {
+    logger.info({ trackingNumber }, 'Shipment exists but missing order link, re-processing');
   }
 
   logger.info({
