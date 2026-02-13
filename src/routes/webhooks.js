@@ -22,21 +22,28 @@ router.post('/shipstation', async (req, res) => {
   // Respond immediately — ShipStation requires response within 10 seconds
   res.status(200).json({ received: true });
 
-  // Process asynchronously
-  if (resource_type !== 'SHIP_NOTIFY') {
-    logger.info({ resource_type }, 'Ignoring non-SHIP_NOTIFY webhook');
+  // Process asynchronously — accept both V1 and V2 event types
+  const isV1 = resource_type === 'SHIP_NOTIFY';
+  const isV2 = resource_type === 'LABEL_CREATED_V2';
+
+  if (!isV1 && !isV2) {
+    logger.info({ resource_type }, 'Ignoring unhandled webhook type');
     return;
   }
 
   if (!resource_url) {
-    logger.error('SHIP_NOTIFY webhook missing resource_url');
+    logger.error({ resource_type }, 'Webhook missing resource_url');
     return;
   }
 
   try {
-    await processShipNotify(resource_url);
+    if (isV2) {
+      await processLabelCreatedV2(resource_url);
+    } else {
+      await processShipNotify(resource_url);
+    }
   } catch (err) {
-    logger.error({ err, resource_url }, 'Error processing SHIP_NOTIFY webhook');
+    logger.error({ err, resource_url, resource_type }, 'Error processing webhook');
   }
 });
 
@@ -57,7 +64,82 @@ async function processShipNotify(resourceUrl) {
         trackingNumber: ssShipment.trackingNumber,
         orderId: ssShipment.orderId,
       }, 'Error processing individual shipment');
-      // Continue processing other shipments in the batch
+    }
+  }
+}
+
+/**
+ * Process a V2 LABEL_CREATED_V2 webhook.
+ * The resource_url points to the V2 labels endpoint.
+ */
+async function processLabelCreatedV2(resourceUrl) {
+  const labels = await shipstationService.fetchLabelsFromV2Webhook(resourceUrl);
+  logger.info({ count: labels.length }, 'Fetched labels from ShipStation V2');
+
+  for (const label of labels) {
+    try {
+      // Normalize V2 label to the same shape processOneShipment expects
+      const normalized = {
+        shipmentId: label.label_id || label.shipment_id,
+        labelId: label.label_id,
+        trackingNumber: label.tracking_number,
+        carrierCode: label.carrier_code,
+        serviceCode: label.service_code,
+        shipDate: label.ship_date || label.created_at,
+        voided: label.voided || label.is_voided || false,
+        shipmentCost: label.shipment_cost?.amount || label.insurance_cost?.amount || 0,
+        orderNumber: null,
+        orderId: null,
+        weight: label.weight || {},
+        dimensions: label.dimensions || label.package_dimensions || {},
+        shipTo: label.ship_to || {},
+      };
+
+      // V2 labels include shipment_id — use it to look up the shipment's order
+      if (label.shipment_id) {
+        try {
+          const v2Shipment = await shipstationService.getV2Shipment(label.shipment_id);
+          if (v2Shipment) {
+            normalized.orderId = v2Shipment.order_id || v2Shipment.orderId;
+            normalized.orderNumber = v2Shipment.order_number || v2Shipment.orderNumber;
+            // Pull weight/dimensions from shipment if label doesn't have them
+            if (!normalized.weight?.value && v2Shipment.weight) {
+              normalized.weight = v2Shipment.weight;
+            }
+            if (!normalized.dimensions?.length && v2Shipment.dimensions) {
+              normalized.dimensions = v2Shipment.dimensions;
+            }
+            if (!normalized.shipTo?.name && v2Shipment.ship_to) {
+              normalized.shipTo = v2Shipment.ship_to;
+            }
+          }
+        } catch (err) {
+          logger.warn({ err, shipmentId: label.shipment_id }, 'Could not fetch V2 shipment details');
+        }
+      }
+
+      // Now we need the ShipStation V1 order to get the Shopify external order ID
+      // V2 doesn't always expose external_order_id the same way
+      // Try to find the order via V1 using the order number
+      if (normalized.orderNumber && !normalized.orderId) {
+        try {
+          // Search V1 orders by orderNumber
+          const v1Orders = await shipstationService.searchOrdersByNumber(normalized.orderNumber);
+          if (v1Orders && v1Orders.length > 0) {
+            normalized.orderId = v1Orders[0].orderId;
+          }
+        } catch (err) {
+          logger.warn({ err, orderNumber: normalized.orderNumber }, 'Could not find V1 order by number');
+        }
+      }
+
+      await processOneShipment(normalized);
+    } catch (err) {
+      logger.error({
+        err,
+        trackingNumber: label.tracking_number,
+        labelId: label.label_id,
+      }, 'Error processing V2 label');
     }
   }
 }
