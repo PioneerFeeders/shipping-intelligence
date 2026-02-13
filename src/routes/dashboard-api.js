@@ -369,6 +369,28 @@ const EMERGENCE_DAYS = [
   { dayOffset: 6, fraction: 0.33 },
 ];
 
+/**
+ * Normalize any date value (Date object, string, etc) to YYYY-MM-DD string.
+ * Handles Postgres date objects, ISO strings, and JS Date objects.
+ */
+function normDate(d) {
+  if (!d) return null;
+  if (typeof d === 'string') {
+    // Already a string — take first 10 chars (YYYY-MM-DD)
+    if (d.length >= 10) return d.substring(0, 10);
+    return d;
+  }
+  if (d instanceof Date) {
+    // Use UTC to avoid timezone shifts
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  // Fallback: try converting
+  return new Date(d).toISOString().split('T')[0];
+}
+
 router.get('/breeding/egg-prediction', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
@@ -429,9 +451,9 @@ router.get('/breeding/egg-prediction', async (req, res) => {
         // Distribute eggs across the 15 nights after emergence
         for (let night = 0; night < EGG_CURVE.length; night++) {
           const eggDate = new Date(emergenceDate);
-          eggDate.setDate(eggDate.getDate() + night + 1); // +1 because night 1 = day after emergence
+          eggDate.setDate(eggDate.getDate() + night + 1);
 
-          const dateStr = eggDate.toISOString().split('T')[0];
+          const dateStr = normDate(eggDate);
 
           // Only include dates within our display window
           if (dateStr >= start_date && dateStr <= end_date) {
@@ -442,25 +464,27 @@ router.get('/breeding/egg-prediction', async (req, res) => {
       }
     }
 
-    // Build actual eggs map
+    // Build actual eggs map — normalize date keys
     const actualByDate = {};
     for (const row of actualEggs) {
-      actualByDate[row.date] = {
+      const key = normDate(row.date);
+      actualByDate[key] = {
         eggs: parseInt(row.total_eggs),
         weight: parseFloat(row.total_weight),
       };
     }
 
-    // Merge into a single timeline
-    const allDates = new Set([...Object.keys(predictedByDate), ...Object.keys(actualByDate)]);
-    
-    // Fill in all dates in range
+    // Merge into a single timeline — fill all dates in range
+    const allDates = new Set();
     const current = new Date(start_date);
     const endD = new Date(end_date);
     while (current <= endD) {
-      allDates.add(current.toISOString().split('T')[0]);
+      allDates.add(normDate(current));
       current.setDate(current.getDate() + 1);
     }
+    // Also add any predicted/actual keys in case they're outside range
+    Object.keys(predictedByDate).forEach(d => allDates.add(d));
+    Object.keys(actualByDate).forEach(d => allDates.add(d));
 
     const timeline = [...allDates].sort().map(date => ({
       date,
