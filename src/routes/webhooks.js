@@ -119,11 +119,20 @@ async function processLabelCreatedV2(resourceUrl) {
         logger.warn({ err, trackingNumber }, 'V1 shipment lookup failed');
       }
 
+      // Extract Shopify order ID from V2 label
+      // external_shipment_id format: "6642760450356-7623999750452" where first part is Shopify order ID
+      // external_order_id is NOT reliable (ShipStation may store other data there)
+      let shopifyIdFromV2 = null;
+      if (label.external_shipment_id) {
+        shopifyIdFromV2 = label.external_shipment_id.split('-')[0];
+        logger.info({ shopifyIdFromV2, external_shipment_id: label.external_shipment_id }, 'Extracted Shopify order ID from V2 external_shipment_id');
+      }
+
       if (v1Shipment) {
         // We have full V1 data — use the existing processOneShipment flow
-        // But also pass through the Shopify order ID from V2 if we have it
-        if (label.external_order_id && !v1Shipment.externalOrderId) {
-          v1Shipment._shopifyOrderIdFromV2 = label.external_order_id;
+        // Pass through the Shopify order ID from V2
+        if (shopifyIdFromV2) {
+          v1Shipment._shopifyOrderIdFromV2 = shopifyIdFromV2;
         }
         await processOneShipment(v1Shipment);
       } else {
@@ -226,17 +235,32 @@ async function processOneShipment(ssShipment) {
       logger.info({ externalId, orderKey: ssOrder.orderKey }, 'ShipStation order external ID');
       if (externalId) {
         // Take just the order ID part (before any dash)
-        shopifyOrderId = parseInt(externalId.split('-')[0]);
+        const candidate = externalId.split('-')[0];
+        // Only use if it looks like a numeric Shopify order ID
+        if (/^\d+$/.test(candidate) && candidate.length > 5) {
+          shopifyOrderId = parseInt(candidate);
+        } else {
+          logger.info({ externalId }, 'V1 externalOrderId is not a Shopify ID, skipping');
+        }
       }
     } else {
       logger.warn({ ssOrderId: ssShipment.orderId }, 'ShipStation getOrder returned null');
     }
   }
 
-  // Fallback: use external_order_id from V2 label if V1 didn't provide it
+  // Fallback: use Shopify order ID from V2 label if V1 didn't provide it
   if (!shopifyOrderId && ssShipment._shopifyOrderIdFromV2) {
     shopifyOrderId = parseInt(ssShipment._shopifyOrderIdFromV2);
     logger.info({ shopifyOrderId }, 'Using Shopify order ID from V2 label data');
+  }
+
+  // Fallback 2: try orderKey from V1 (format: "shopifyOrderId-lineItemId")
+  if (!shopifyOrderId && ssOrder?.orderKey) {
+    const keyCandidate = ssOrder.orderKey.split('-')[0];
+    if (/^\d+$/.test(keyCandidate) && keyCandidate.length > 5) {
+      shopifyOrderId = parseInt(keyCandidate);
+      logger.info({ shopifyOrderId, orderKey: ssOrder.orderKey }, 'Using Shopify order ID from V1 orderKey');
+    }
   }
 
   logger.info({ shopifyOrderId, hasOrder: !!ssOrder }, 'Shopify order ID resolution');
