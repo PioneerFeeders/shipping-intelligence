@@ -351,6 +351,7 @@
           <div class="chart-title">Egg Production — Actual vs Predicted</div>
           <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
             Model: 750 eggs/female · 50% female ratio · 10% pre-emergence mortality · emergence days 4-6 · gamma curve peaking night 8
+            <br><span style="color:#34d399">●</span> Real collection &nbsp; <span style="color:#f87171">●</span> Interpolated (skipped day, split evenly) &nbsp; <span style="color:#818cf8">┈</span> Predicted
           </div>
           <div class="chart-wrap" style="height:320px"><canvas id="chart-egg-prediction"></canvas></div>
         </div>
@@ -631,6 +632,20 @@
         // Egg prediction chart — the hero chart
         if (prediction?.timeline && prediction.timeline.length) {
           const timeline = prediction.timeline;
+          
+          // Build point colors: green for real, red for interpolated, transparent for no data
+          const actualPointColors = timeline.map(d => {
+            if (d.actual > 0 && d.isInterpolated) return '#f87171'; // red for interpolated
+            if (d.actual > 0 && d.isReal) return '#34d399'; // green for real
+            return 'transparent';
+          });
+          const actualPointBorders = timeline.map(d => {
+            if (d.actual > 0 && d.isInterpolated) return '#f87171';
+            if (d.actual > 0 && d.isReal) return '#34d399';
+            return 'transparent';
+          });
+          const actualPointRadii = timeline.map(d => d.actual > 0 ? 5 : 0);
+
           makeChart('chart-egg-prediction', 'line', {
             labels: timeline.map(d => shortDate(d.date)),
             datasets: [
@@ -641,8 +656,10 @@
                 backgroundColor: 'rgba(52,211,153,0.1)',
                 fill: false,
                 tension: 0.3,
-                pointRadius: 5,
-                pointBackgroundColor: '#34d399',
+                pointRadius: actualPointRadii,
+                pointBackgroundColor: actualPointColors,
+                pointBorderColor: actualPointBorders,
+                pointBorderWidth: 2,
                 borderWidth: 2.5,
                 spanGaps: true,
               },
