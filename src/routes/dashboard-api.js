@@ -359,9 +359,10 @@ function getEggCurve() {
 }
 
 const EGG_CURVE = getEggCurve();
-const EGGS_PER_FEMALE = 750;
-const PRE_EMERGENCE_MORTALITY = 0.10;  // 10% die before emerging
+const EGGS_PER_FEMALE = 500;
+const PRE_EMERGENCE_MORTALITY = 0.15;  // 15% die before emerging/laying
 const FEMALE_RATIO = 0.50;
+const COLLECTION_EFFICIENCY = 0.85;    // 85% of eggs are actually collected
 // Emergence spread: 33% on day 4, 33% day 5, 33% day 6 after harvest
 const EMERGENCE_DAYS = [
   { dayOffset: 4, fraction: 0.33 },
@@ -457,7 +458,7 @@ router.get('/breeding/egg-prediction', async (req, res) => {
 
           // Only include dates within our display window
           if (dateStr >= start_date && dateStr <= end_date) {
-            const eggsToday = femalesEmerging * EGGS_PER_FEMALE * EGG_CURVE[night];
+            const eggsToday = femalesEmerging * EGGS_PER_FEMALE * COLLECTION_EFFICIENCY * EGG_CURVE[night];
             predictedByDate[dateStr] = (predictedByDate[dateStr] || 0) + eggsToday;
           }
         }
@@ -538,6 +539,7 @@ router.get('/breeding/egg-prediction', async (req, res) => {
       },
       model: {
         eggsPerFemale: EGGS_PER_FEMALE,
+        collectionEfficiency: COLLECTION_EFFICIENCY,
         preEmergenceMortality: PRE_EMERGENCE_MORTALITY,
         femaleRatio: FEMALE_RATIO,
         emergenceDayOffset: '4-6',
