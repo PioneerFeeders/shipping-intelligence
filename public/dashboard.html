@@ -266,7 +266,7 @@
       <div class="header-nav">
         <button class="nav-btn active" onclick="showSection('sales', this)">Sales</button>
         <button class="nav-btn" onclick="showSection('shipping', this)">Shipping</button>
-        <button class="nav-btn" onclick="showSection('breeding', this)">Breeding</button>
+        <button class="nav-btn" onclick="showSection('breeding', this)">Hornworm Breeding</button>
       </div>
     </div>
     <div class="date-controls">
@@ -343,13 +343,20 @@
 
     <!-- BREEDING SECTION -->
     <div class="section" id="sec-breeding">
-      <div class="section-title"><span class="dot" style="background:var(--accent-green)"></span> Breeding Operations</div>
+      <div class="section-title"><span class="dot" style="background:var(--accent-green)"></span> Hornworm Breeding Dashboard</div>
       <div id="breeding-loading" class="loading"><div class="spinner"></div>Loading breeding data...</div>
       <div id="breeding-content" style="display:none">
         <div class="stats-grid" id="breeding-stats"></div>
+        <div class="chart-card" style="margin-bottom:24px">
+          <div class="chart-title">Egg Production — Actual vs Predicted</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+            Model: 750 eggs/female · 50% female ratio · 10% pre-emergence mortality · emergence days 4-6 · gamma curve peaking night 8
+          </div>
+          <div class="chart-wrap" style="height:320px"><canvas id="chart-egg-prediction"></canvas></div>
+        </div>
         <div class="charts-row">
           <div class="chart-card full">
-            <div class="chart-title">Daily Egg Collection</div>
+            <div class="chart-title">Daily Egg Collection (Weight & Count)</div>
             <div class="chart-wrap"><canvas id="chart-eggs"></canvas></div>
           </div>
         </div>
@@ -597,19 +604,69 @@
     async function loadBreeding() {
       show('breeding-loading'); hide('breeding-content');
       try {
-        const [eggs, prepupae] = await Promise.all([
+        const [eggs, prepupae, prediction] = await Promise.all([
           api(`/breeding/eggs?start_date=${startDate}&end_date=${endDate}`),
           api(`/breeding/prepupae?start_date=${startDate}&end_date=${endDate}`),
+          api(`/breeding/egg-prediction?start_date=${startDate}&end_date=${endDate}`),
         ]);
 
         if (!eggs) return;
 
+        // Prediction stats
+        const predSummary = prediction?.summary || {};
+        const accuracyColor = predSummary.accuracy 
+          ? (Math.abs(parseFloat(predSummary.variancePct)) < 15 ? '--accent-green' : '--accent-amber')
+          : '--text-muted';
+        const varianceSign = predSummary.variance >= 0 ? '+' : '';
+
         document.getElementById('breeding-stats').innerHTML = `
           ${statCard('Total Eggs', n(eggs.summary.total_eggs, 0), `${eggs.summary.total_collections} collections`, '--accent-green')}
           ${statCard('Egg Weight', n(eggs.summary.total_weight, 1) + 'g', 'avg ' + n(eggs.summary.avg_weight, 1) + 'g/day', '--accent-teal')}
+          ${statCard('Predicted Eggs', n(predSummary.totalPredicted || 0, 0), 'from pre-pupae model', '--accent-purple')}
+          ${statCard('Model Accuracy', predSummary.accuracy ? predSummary.accuracy + '%' : 'N/A', predSummary.variance != null ? varianceSign + n(predSummary.variance, 0) + ' variance' : '', accuracyColor)}
           ${statCard('Pre-Pupae Collected', n(prepupae.summary.total_collected, 0), `${prepupae.summary.total_entries} entries`, '--accent-amber')}
           ${statCard('Mortality Rate', n(prepupae.summary.mortality_rate, 1) + '%', n(prepupae.summary.total_dead, 0) + ' dead', parseFloat(prepupae.summary.mortality_rate) > 10 ? '--accent-red' : '--accent-green')}
         `;
+
+        // Egg prediction chart — the hero chart
+        if (prediction?.timeline && prediction.timeline.length) {
+          const timeline = prediction.timeline;
+          makeChart('chart-egg-prediction', 'line', {
+            labels: timeline.map(d => shortDate(d.date)),
+            datasets: [
+              {
+                label: 'Actual Eggs',
+                data: timeline.map(d => d.actual || null),
+                borderColor: '#34d399',
+                backgroundColor: 'rgba(52,211,153,0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: '#34d399',
+                borderWidth: 2.5,
+                spanGaps: false,
+              },
+              {
+                label: 'Predicted Eggs',
+                data: timeline.map(d => d.predicted || null),
+                borderColor: '#818cf8',
+                backgroundColor: 'rgba(129,140,248,0.05)',
+                fill: true,
+                borderDash: [6, 3],
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: '#818cf8',
+                borderWidth: 2,
+                spanGaps: true,
+              },
+            ]
+          }, {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Egg Count' },
+            },
+          });
+        }
 
         // Eggs daily chart
         if (eggs.daily && eggs.daily.length) {
