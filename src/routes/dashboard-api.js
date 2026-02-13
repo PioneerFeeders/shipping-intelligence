@@ -475,25 +475,54 @@ router.get('/breeding/egg-prediction', async (req, res) => {
     }
 
     // Merge into a single timeline — fill all dates in range
-    const allDates = new Set();
+    const allDates = [];
     const current = new Date(start_date);
     const endD = new Date(end_date);
     while (current <= endD) {
-      allDates.add(normDate(current));
+      allDates.push(normDate(current));
       current.setDate(current.getDate() + 1);
     }
-    // Also add any predicted/actual keys in case they're outside range
-    Object.keys(predictedByDate).forEach(d => allDates.add(d));
-    Object.keys(actualByDate).forEach(d => allDates.add(d));
 
-    const timeline = [...allDates].sort().map(date => ({
+    // Build raw timeline first
+    const rawTimeline = allDates.map(date => ({
       date,
       predicted: Math.round(predictedByDate[date] || 0),
       actual: actualByDate[date]?.eggs || 0,
       actualWeight: actualByDate[date]?.weight || 0,
+      isReal: !!(actualByDate[date]?.eggs), // true if there was a real collection
     }));
 
-    // Summary stats
+    // Interpolation: distribute collection-day totals evenly across preceding skipped days
+    // Walk forward, tracking skipped days. When we hit a real collection, 
+    // split it evenly across (skipped_count + 1) days.
+    const timeline = [...rawTimeline];
+    let skippedStart = null; // index of first skipped day in current run
+
+    for (let i = 0; i < timeline.length; i++) {
+      if (timeline[i].isReal && timeline[i].actual > 0) {
+        // Real collection day — check if there were skipped days before it
+        if (skippedStart !== null) {
+          const totalDays = i - skippedStart + 1; // skipped days + this collection day
+          const perDay = Math.round(timeline[i].actual / totalDays);
+
+          // Distribute evenly to skipped days (mark as interpolated)
+          for (let j = skippedStart; j < i; j++) {
+            timeline[j].actual = perDay;
+            timeline[j].isReal = false;
+            timeline[j].isInterpolated = true;
+          }
+          // Adjust the collection day itself to the same even share
+          timeline[i].actual = perDay;
+          timeline[i].isInterpolated = false;
+        }
+        skippedStart = null;
+      } else {
+        // No collection this day
+        if (skippedStart === null) skippedStart = i;
+      }
+    }
+
+    // Summary stats — use the interpolated actuals for comparison
     const totalPredicted = timeline.reduce((s, d) => s + d.predicted, 0);
     const totalActual = timeline.reduce((s, d) => s + d.actual, 0);
     const accuracy = totalPredicted > 0 ? ((totalActual / totalPredicted) * 100).toFixed(1) : null;
