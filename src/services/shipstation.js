@@ -54,6 +54,81 @@ async function getOrder(orderId) {
   }
 }
 
+// V2 API uses API-Key header
+const v2Client = axios.create({
+  baseURL: 'https://api.shipstation.com/v2',
+  headers: {
+    'API-Key': config.shipstation.v2ApiKey,
+    'Content-Type': 'application/json',
+  },
+  timeout: 30000,
+});
+
+/**
+ * Fetch labels from V2 webhook resource_url.
+ * V2 LABEL_CREATED_V2 provides a URL like:
+ *   https://api.shipstation.com/v2/labels?batch_id=se-XXXXX
+ */
+async function fetchLabelsFromV2Webhook(resourceUrl) {
+  await shipstationLimiter.wait();
+  try {
+    const response = await axios.get(resourceUrl, {
+      headers: {
+        'API-Key': config.shipstation.v2ApiKey,
+        'Content-Type': 'application/json',
+      },
+      timeout: 30000,
+    });
+
+    const data = response.data;
+    logger.info({ responseKeys: Object.keys(data) }, 'V2 webhook response structure');
+
+    // V2 may return { labels: [...] } or { data: [...] } or just an array
+    if (Array.isArray(data)) return data;
+    if (data.labels) return Array.isArray(data.labels) ? data.labels : [data.labels];
+    if (data.data) return Array.isArray(data.data) ? data.data : [data.data];
+
+    // Single label response
+    if (data.label_id || data.tracking_number) return [data];
+
+    logger.warn({ data: JSON.stringify(data).substring(0, 500) }, 'Unexpected V2 labels response structure');
+    return [];
+  } catch (err) {
+    logger.error({ err, url: resourceUrl }, 'Failed to fetch labels from V2 webhook');
+    throw err;
+  }
+}
+
+/**
+ * Get a V2 shipment by ID.
+ */
+async function getV2Shipment(shipmentId) {
+  await shipstationLimiter.wait();
+  try {
+    const response = await v2Client.get(`/shipments/${shipmentId}`);
+    return response.data;
+  } catch (err) {
+    logger.warn({ err, shipmentId }, 'Failed to fetch V2 shipment');
+    return null;
+  }
+}
+
+/**
+ * Search V1 orders by order number to find Shopify external order ID.
+ */
+async function searchOrdersByNumber(orderNumber) {
+  await shipstationLimiter.wait();
+  try {
+    const response = await v1Client.get('/orders', {
+      params: { orderNumber, pageSize: 1 },
+    });
+    return response.data.orders || [];
+  } catch (err) {
+    logger.warn({ err, orderNumber }, 'Failed to search V1 orders by number');
+    return [];
+  }
+}
+
 /**
  * List shipments with filters.
  * Useful for backfill or manual queries.
@@ -77,6 +152,9 @@ async function listShipments(params = {}) {
 
 module.exports = {
   fetchShipmentsFromWebhook,
+  fetchLabelsFromV2Webhook,
   getOrder,
+  getV2Shipment,
+  searchOrdersByNumber,
   listShipments,
 };
