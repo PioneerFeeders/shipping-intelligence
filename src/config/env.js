@@ -20,6 +20,8 @@ module.exports = {
   port: parseInt(process.env.PORT || '3000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   databaseUrl: process.env.DATABASE_URL,
+  neonDatabaseUrl: process.env.NEON_DATABASE_URL,
+  dashboardPassword: process.env.DASHBOARD_PASSWORD || 'pioneer2026',
 
   shipstation: {
     apiKey: process.env.SHIPSTATION_API_KEY,
