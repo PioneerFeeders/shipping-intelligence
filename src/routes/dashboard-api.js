@@ -314,6 +314,190 @@ router.get('/breeding/prepupae', async (req, res) => {
 });
 
 // ============================================================
+// EGG PRODUCTION PREDICTION MODEL
+// ============================================================
+
+/**
+ * Egg production curve per female moth.
+ * Night 1-2 after emergence: mating (0 eggs)
+ * Night 3: egg laying begins
+ * Night 8: peak
+ * Night 12: 85% produced
+ * Night 15: moth dies
+ * 
+ * We model this as a gamma-like distribution.
+ * Total = 750 eggs per female.
+ */
+function getEggCurve() {
+  // Relative weights for each night after emergence (nights 1-15)
+  // Night 1-2: mating, no eggs
+  // Night 3: laying begins
+  // Night 8: peak
+  // Night 12: ~85% cumulative
+  // Night 15: done
+  const rawWeights = [
+    0,      // night 1 (mating)
+    0,      // night 2 (mating peak)
+    0.02,   // night 3 (laying begins)
+    0.04,   // night 4
+    0.07,   // night 5
+    0.10,   // night 6
+    0.13,   // night 7
+    0.15,   // night 8 (peak)
+    0.14,   // night 9
+    0.12,   // night 10
+    0.09,   // night 11
+    0.06,   // night 12 (85% cumulative reached)
+    0.04,   // night 13
+    0.03,   // night 14
+    0.01,   // night 15 (moth dies)
+  ];
+
+  // Normalize to sum to 1.0
+  const total = rawWeights.reduce((a, b) => a + b, 0);
+  return rawWeights.map(w => w / total);
+}
+
+const EGG_CURVE = getEggCurve();
+const EGGS_PER_FEMALE = 750;
+const PRE_EMERGENCE_MORTALITY = 0.10;  // 10% die before emerging
+const FEMALE_RATIO = 0.50;
+// Emergence spread: 33% on day 4, 33% day 5, 33% day 6 after harvest
+const EMERGENCE_DAYS = [
+  { dayOffset: 4, fraction: 0.33 },
+  { dayOffset: 5, fraction: 0.34 },
+  { dayOffset: 6, fraction: 0.33 },
+];
+
+router.get('/breeding/egg-prediction', async (req, res) => {
+  try {
+    const { start_date, end_date } = req.query;
+    if (!start_date || !end_date) {
+      return res.status(400).json({ error: 'start_date and end_date required' });
+    }
+
+    // We need pre-pupae data from 25 days before start_date
+    // because harvests from ~20 days prior still produce eggs in our window
+    const lookbackDate = new Date(start_date);
+    lookbackDate.setDate(lookbackDate.getDate() - 25);
+    const lookbackStr = lookbackDate.toISOString().split('T')[0];
+
+    // Also look ahead: harvests during our window produce eggs after end_date
+    // but we want to show predictions within our window
+    const { rows: prepupaeData } = await neonDb.query(`
+      SELECT
+        date::date as date,
+        SUM(count) as total_collected,
+        SUM(COALESCE(dead_count, 0)) as total_dead
+      FROM collection_entries
+      WHERE date >= $1 AND date <= $2
+      GROUP BY date::date
+      ORDER BY date
+    `, [lookbackStr, end_date]);
+
+    // Get actual egg data for comparison
+    const { rows: actualEggs } = await neonDb.query(`
+      SELECT
+        collection_date::date as date,
+        SUM(egg_count) as total_eggs,
+        SUM(weight_grams::numeric) as total_weight
+      FROM egg_collections
+      WHERE collection_date >= $1 AND collection_date <= $2
+      GROUP BY collection_date::date
+      ORDER BY date
+    `, [start_date, end_date]);
+
+    // Build prediction: for each day's harvest, distribute eggs across future days
+    const predictedByDate = {};
+
+    for (const harvest of prepupaeData) {
+      const harvestDate = new Date(harvest.date);
+      const alive = parseInt(harvest.total_collected) - parseInt(harvest.total_dead);
+      if (alive <= 0) continue;
+
+      const surviving = alive * (1 - PRE_EMERGENCE_MORTALITY);
+      const females = surviving * FEMALE_RATIO;
+
+      // For each emergence day spread
+      for (const emergence of EMERGENCE_DAYS) {
+        const femalesEmerging = females * emergence.fraction;
+        if (femalesEmerging < 1) continue;
+
+        const emergenceDate = new Date(harvestDate);
+        emergenceDate.setDate(emergenceDate.getDate() + emergence.dayOffset);
+
+        // Distribute eggs across the 15 nights after emergence
+        for (let night = 0; night < EGG_CURVE.length; night++) {
+          const eggDate = new Date(emergenceDate);
+          eggDate.setDate(eggDate.getDate() + night + 1); // +1 because night 1 = day after emergence
+
+          const dateStr = eggDate.toISOString().split('T')[0];
+
+          // Only include dates within our display window
+          if (dateStr >= start_date && dateStr <= end_date) {
+            const eggsToday = femalesEmerging * EGGS_PER_FEMALE * EGG_CURVE[night];
+            predictedByDate[dateStr] = (predictedByDate[dateStr] || 0) + eggsToday;
+          }
+        }
+      }
+    }
+
+    // Build actual eggs map
+    const actualByDate = {};
+    for (const row of actualEggs) {
+      actualByDate[row.date] = {
+        eggs: parseInt(row.total_eggs),
+        weight: parseFloat(row.total_weight),
+      };
+    }
+
+    // Merge into a single timeline
+    const allDates = new Set([...Object.keys(predictedByDate), ...Object.keys(actualByDate)]);
+    
+    // Fill in all dates in range
+    const current = new Date(start_date);
+    const endD = new Date(end_date);
+    while (current <= endD) {
+      allDates.add(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+
+    const timeline = [...allDates].sort().map(date => ({
+      date,
+      predicted: Math.round(predictedByDate[date] || 0),
+      actual: actualByDate[date]?.eggs || 0,
+      actualWeight: actualByDate[date]?.weight || 0,
+    }));
+
+    // Summary stats
+    const totalPredicted = timeline.reduce((s, d) => s + d.predicted, 0);
+    const totalActual = timeline.reduce((s, d) => s + d.actual, 0);
+    const accuracy = totalPredicted > 0 ? ((totalActual / totalPredicted) * 100).toFixed(1) : null;
+
+    res.json({
+      timeline,
+      summary: {
+        totalPredicted,
+        totalActual,
+        accuracy,
+        variance: totalActual - totalPredicted,
+        variancePct: totalPredicted > 0 ? (((totalActual - totalPredicted) / totalPredicted) * 100).toFixed(1) : null,
+      },
+      model: {
+        eggsPerFemale: EGGS_PER_FEMALE,
+        preEmergenceMortality: PRE_EMERGENCE_MORTALITY,
+        femaleRatio: FEMALE_RATIO,
+        emergenceDayOffset: '4-6',
+        eggLayingCurve: 'gamma-like, peaks night 8, 85% by night 12',
+      },
+    });
+  } catch (err) {
+    logger.error({ err }, 'Dashboard: egg prediction error');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
 // SHOPIFY HELPERS
 // ============================================================
 
