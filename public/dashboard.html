@@ -4,810 +4,615 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pioneer Feeders — Operations Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg-primary: #0a0e17;
-      --bg-card: #131a2b;
-      --bg-card-hover: #1a2236;
-      --border: #1e293b;
-      --border-light: #2d3a52;
-      --text-primary: #e2e8f0;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --accent-blue: #38bdf8;
-      --accent-purple: #818cf8;
-      --accent-green: #34d399;
-      --accent-amber: #fbbf24;
-      --accent-red: #f87171;
-      --accent-pink: #f472b6;
-      --accent-teal: #2dd4bf;
+      --bg:#080b12;--bg-card:#0f1520;--bg-row:#111827;--bg-hover:#161f30;
+      --border:#1a2235;--border-light:#243049;
+      --text:#e2e8f0;--text-2:#94a3b8;--text-3:#64748b;
+      --green:#22c55e;--green-dim:rgba(34,197,94,0.08);--green-b:rgba(34,197,94,0.2);
+      --yellow:#eab308;--yellow-dim:rgba(234,179,8,0.08);--yellow-b:rgba(234,179,8,0.2);
+      --red:#ef4444;--red-dim:rgba(239,68,68,0.08);--red-b:rgba(239,68,68,0.2);
+      --blue:#38bdf8;--purple:#818cf8;--teal:#2dd4bf;--orange:#fb923c;--amber:#fbbf24;--pink:#f472b6;
+      --chewy:#1C49C2;--amazon:#FF9900;--shopify:#96bf48;
+      --ebay-blue:#0064D2;--ebay-red:#e53238;--ebay-yellow:#f5af02;--ebay-green:#86b817;
+      --ups-brown:#351C15;--ups-gold:#FFB500;
     }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    .header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+    .header-left{display:flex;align-items:center;gap:20px}
+    .brand{font-size:12px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-3)}.brand b{color:var(--blue)}
+    .header-nav{display:flex;gap:4px}
+    .nav-btn{padding:7px 14px;background:transparent;border:1px solid transparent;border-radius:7px;color:var(--text-2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer}
+    .nav-btn:hover{background:rgba(56,189,248,0.05)}.nav-btn.active{background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.2);color:var(--blue)}
+    .date-controls{display:flex;align-items:center;gap:10px}
+    .date-preset{padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text-2);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer}
+    .date-preset.active{background:rgba(56,189,248,0.1);border-color:var(--blue);color:var(--blue)}
+    .date-input{background:var(--bg-card);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text-2);font-family:'JetBrains Mono',monospace;font-size:11px}
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      min-height: 100vh;
-    }
+    .main{padding:20px 32px;max-width:1500px;margin:0 auto}
+    .section{display:none}.section.active{display:block}
 
-    /* Header */
-    .header {
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(20px);
-    }
-    .header-left { display: flex; align-items: center; gap: 24px; }
-    .brand {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-    .brand span { color: var(--accent-blue); }
-    .header-nav { display: flex; gap: 4px; }
-    .nav-btn {
-      padding: 8px 16px;
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      color: var(--text-secondary);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .nav-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
-    .nav-btn.active {
-      background: rgba(56, 189, 248, 0.1);
-      border-color: rgba(56, 189, 248, 0.2);
-      color: var(--accent-blue);
-    }
+    .kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+    .kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s}
+    .kpi:hover{border-color:var(--border-light)}
+    .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .kpi-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3)}
+    .kpi-status{width:8px;height:8px;border-radius:50%}
+    .kpi-value{font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1}
+    .kpi-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+    .kpi-sub{font-size:11px;color:var(--text-3)}
+    .kpi-trend{font-size:11px;font-weight:600;display:flex;align-items:center;gap:2px}
+    .kpi-trend svg{width:12px;height:12px}
+    .kpi-accent{position:absolute;bottom:0;left:0;right:0;height:2px}
 
-    /* Date picker */
-    .date-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .date-input {
-      padding: 8px 12px;
-      background: var(--bg-primary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text-primary);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      outline: none;
-    }
-    .date-input:focus { border-color: var(--accent-blue); }
-    .date-preset {
-      padding: 6px 12px;
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text-secondary);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .date-preset:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
-    .date-preset.active { background: rgba(56,189,248,0.1); border-color: var(--accent-blue); color: var(--accent-blue); }
+    .sec{display:flex;align-items:center;gap:10px;margin:24px 0 14px}
+    .sec-dot{width:6px;height:6px;border-radius:50%}
+    .sec-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-3)}
+    .sec-line{flex:1;height:1px;background:var(--border)}
+    .sec-note{font-size:10px;color:var(--text-3);font-weight:400}
 
-    /* Main layout */
-    .main { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+    .sc{width:100%;border-collapse:separate;border-spacing:0;background:var(--bg-card);border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px}
+    .sc th{text-align:left;padding:8px 14px;font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);background:rgba(17,24,39,0.6);border-bottom:1px solid var(--border)}
+    .sc td{padding:10px 14px;border-bottom:1px solid rgba(26,34,53,0.5);font-size:13px;color:var(--text-2);vertical-align:middle}
+    .sc tr:last-child td{border-bottom:none}.sc tr:hover td{background:var(--bg-hover)}
+    .sc .mn{color:var(--text);font-weight:600}.sc .ms{font-size:10px;color:var(--text-3);margin-top:1px}
+    .mono{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500}
+    .mono-s{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3)}
+    .st{display:inline-flex;align-items:center;justify-content:center;min-width:54px;height:22px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+    .st-g{background:var(--green-dim);color:var(--green);border:1px solid var(--green-b)}
+    .st-y{background:var(--yellow-dim);color:var(--yellow);border:1px solid var(--yellow-b)}
+    .st-r{background:var(--red-dim);color:var(--red);border:1px solid var(--red-b)}
+    .tr{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:600}
+    .tr svg{width:12px;height:12px}
+    .tr-u{color:var(--green)}.tr-d{color:var(--red)}.tr-f{color:var(--text-3)}
+    .pay{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+    .pay-g{background:var(--green-dim);color:var(--green);border:1px solid var(--green-b)}
+    .pay-y{background:var(--yellow-dim);color:var(--yellow);border:1px solid var(--yellow-b)}
+    .pay-r{background:var(--red-dim);color:var(--red);border:1px solid var(--red-b)}
 
-    /* Section */
-    .section { display: none; }
-    .section.active { display: block; }
-    .section-title {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .section-title .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-    }
+    .ch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+    .ch{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;border-left:3px solid var(--border)}
+    .ch:hover{border-color:var(--border-light)}
+    .ch-name{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+    .ch-row{display:flex;justify-content:space-between;margin-bottom:6px}
+    .ch-metric{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.3px}
+    .ch-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace}
+    .ch-divider{border:none;border-top:1px solid rgba(26,34,53,.5);margin:10px 0}
+    .ch-cups{font-size:11px;color:var(--text-3)}.ch-cups b{color:var(--text-2);font-family:'JetBrains Mono',monospace}
 
-    /* Cards grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      transition: border-color 0.2s;
-    }
-    .stat-card:hover { border-color: var(--border-light); }
-    .stat-label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-    .stat-value {
-      font-size: 28px;
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      line-height: 1;
-    }
-    .stat-sub {
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-top: 6px;
-    }
+    .cg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .cc{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:18px}
+    .cc.full{grid-column:1/-1}
+    .ct{font-size:12px;font-weight:600;color:var(--text-3);margin-bottom:12px;letter-spacing:.3px}
+    .cw{height:240px;position:relative}
+    .cw-tall{height:320px;position:relative}
 
-    /* Chart containers */
-    .charts-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    .chart-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-    }
-    .chart-card.full { grid-column: 1 / -1; }
-    .chart-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 16px;
-    }
-    .chart-wrap { position: relative; height: 280px; }
+    .bars{margin:12px 0 16px}
+    .bar-r{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+    .bar-l{width:150px;font-size:11px;color:var(--text-2);text-align:right;flex-shrink:0}
+    .bar-t{flex:1;height:22px;background:rgba(26,34,53,.4);border-radius:4px;overflow:hidden}
+    .bar-f{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:600;font-family:'JetBrains Mono',monospace}
 
-    /* Table */
-    .table-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 24px;
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    th {
-      text-align: left;
-      padding: 10px 12px;
-      color: var(--text-muted);
-      font-weight: 500;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-bottom: 1px solid var(--border);
-    }
-    td {
-      padding: 10px 12px;
-      border-bottom: 1px solid rgba(30,41,59,0.5);
-      color: var(--text-secondary);
-    }
-    tr:hover td { color: var(--text-primary); }
-    .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+    .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px}
+    .stat-label{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+    .stat-value{font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1}
+    .stat-sub{font-size:11px;color:var(--text-3);margin-top:6px}
 
-    /* Badge */
-    .badge {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .badge-green { background: rgba(52,211,153,0.15); color: var(--accent-green); }
-    .badge-amber { background: rgba(251,191,36,0.15); color: var(--accent-amber); }
-    .badge-red { background: rgba(248,113,113,0.15); color: var(--accent-red); }
-    .badge-blue { background: rgba(56,189,248,0.15); color: var(--accent-blue); }
-    .badge-purple { background: rgba(129,140,248,0.15); color: var(--accent-purple); }
+    .loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--text-3)}
+    .spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-right:12px}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
-    /* Loading */
-    .loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 60px;
-      color: var(--text-muted);
-    }
-    .spinner {
-      width: 24px; height: 24px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent-blue);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-right: 12px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .header { padding: 12px 16px; flex-wrap: wrap; gap: 12px; }
-      .main { padding: 16px; }
-      .charts-row { grid-template-columns: 1fr; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .date-controls { flex-wrap: wrap; }
-    }
+    @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}.ch-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:768px){.main{padding:12px}.kpi-row,.ch-grid{grid-template-columns:1fr 1fr}.cg{grid-template-columns:1fr}.header{padding:12px 16px;flex-wrap:wrap;gap:12px}.date-controls{flex-wrap:wrap}}
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="header-left">
-      <div class="brand">Pioneer <span>Feeders</span></div>
-      <div class="header-nav">
-        <button class="nav-btn active" onclick="showSection('sales', this)">Sales</button>
-        <button class="nav-btn" onclick="showSection('shipping', this)">Shipping</button>
-        <button class="nav-btn" onclick="showSection('breeding', this)">Hornworm Breeding</button>
-      </div>
-    </div>
-    <div class="date-controls">
-      <button class="date-preset active" onclick="setPreset('7d', this)">7D</button>
-      <button class="date-preset" onclick="setPreset('14d', this)">14D</button>
-      <button class="date-preset" onclick="setPreset('30d', this)">30D</button>
-      <button class="date-preset" onclick="setPreset('90d', this)">90D</button>
-      <input type="date" class="date-input" id="startDate">
-      <span style="color:var(--text-muted)">→</span>
-      <input type="date" class="date-input" id="endDate">
+<div class="header">
+  <div class="header-left">
+    <div class="brand">Pioneer <b>Feeders</b></div>
+    <div class="header-nav">
+      <button class="nav-btn active" onclick="showSection('sales', this)">Sales</button>
+      <button class="nav-btn" onclick="showSection('shipping', this)">Shipping</button>
+      <button class="nav-btn" onclick="showSection('breeding', this)">Hornworm Breeding</button>
     </div>
   </div>
+  <div class="date-controls">
+    <button class="date-preset active" onclick="setPreset('7d', this)">7D</button>
+    <button class="date-preset" onclick="setPreset('14d', this)">14D</button>
+    <button class="date-preset" onclick="setPreset('30d', this)">30D</button>
+    <button class="date-preset" onclick="setPreset('90d', this)">90D</button>
+    <input type="date" class="date-input" id="startDate">
+    <span style="color:var(--text-3)">→</span>
+    <input type="date" class="date-input" id="endDate">
+  </div>
+</div>
 
-  <div class="main">
-    <!-- SALES SECTION -->
-    <div class="section active" id="sec-sales">
-      <div class="section-title"><span class="dot" style="background:var(--accent-blue)"></span> Sales Overview</div>
-      <div id="sales-loading" class="loading"><div class="spinner"></div>Loading sales data...</div>
-      <div id="sales-content" style="display:none">
-        <div class="stats-grid" id="sales-stats"></div>
-        <div class="charts-row">
-          <div class="chart-card full">
-            <div class="chart-title">Daily Revenue & Cups Sold</div>
-            <div class="chart-wrap"><canvas id="chart-daily-sales"></canvas></div>
-          </div>
+<div class="main">
+
+  <!-- ========== SALES SECTION ========== -->
+  <div class="section active" id="sec-sales">
+    <div id="sales-loading" class="loading"><div class="spinner"></div>Loading sales data...</div>
+    <div id="sales-content" style="display:none">
+      <div id="sales-kpis" class="kpi-row"></div>
+
+      <div class="cc full" style="margin-bottom:16px">
+        <div class="ct">Daily Revenue & Cups Sold</div>
+        <div class="cw"><canvas id="chart-daily-sales"></canvas></div>
+      </div>
+
+      <div class="sec">
+        <span class="sec-dot" style="background:var(--teal)"></span>
+        <span class="sec-label">Retail Channels</span>
+        <span class="sec-line"></span>
+      </div>
+      <div id="sales-channels" class="ch-grid"></div>
+
+      <div class="sec">
+        <span class="sec-dot" style="background:var(--purple)"></span>
+        <span class="sec-label">Wholesale</span>
+        <span class="sec-line"></span>
+      </div>
+      <div id="sales-wholesale" class="stats-grid"></div>
+
+      <div class="cg">
+        <div class="cc">
+          <div class="ct">Revenue by Channel</div>
+          <div class="cw"><canvas id="chart-channel"></canvas></div>
         </div>
-        <div class="charts-row">
-          <div class="chart-card">
-            <div class="chart-title">Revenue by Channel</div>
-            <div class="chart-wrap"><canvas id="chart-channel"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Cups Sold by Type</div>
-            <div class="chart-wrap"><canvas id="chart-cups"></canvas></div>
-          </div>
-        </div>
-        <div class="charts-row">
-          <div class="chart-card">
-            <div class="chart-title">Wholesale vs Retail</div>
-            <div class="chart-wrap"><canvas id="chart-tier"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Cups by Product Type</div>
-            <div class="chart-wrap"><canvas id="chart-product-cups"></canvas></div>
-          </div>
+        <div class="cc">
+          <div class="ct">Cups by Product Type</div>
+          <div class="cw"><canvas id="chart-cups"></canvas></div>
         </div>
       </div>
-    </div>
-
-    <!-- SHIPPING SECTION -->
-    <div class="section" id="sec-shipping">
-      <div class="section-title"><span class="dot" style="background:var(--accent-purple)"></span> Shipping Intelligence</div>
-      <div id="shipping-loading" class="loading"><div class="spinner"></div>Loading shipping data...</div>
-      <div id="shipping-content" style="display:none">
-        <div class="stats-grid" id="shipping-stats"></div>
-        <div class="charts-row">
-          <div class="chart-card full">
-            <div class="chart-title">Daily Shipping Cost & Shipments</div>
-            <div class="chart-wrap"><canvas id="chart-daily-shipping"></canvas></div>
-          </div>
+      <div class="cg">
+        <div class="cc">
+          <div class="ct">Channel Cup Breakdown</div>
+          <div class="cw"><canvas id="chart-channel-cups"></canvas></div>
         </div>
-        <div class="charts-row">
-          <div class="chart-card">
-            <div class="chart-title">Cost by Service</div>
-            <div class="chart-wrap"><canvas id="chart-service"></canvas></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Shipments by State</div>
-            <div class="chart-wrap"><canvas id="chart-state"></canvas></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BREEDING SECTION -->
-    <div class="section" id="sec-breeding">
-      <div class="section-title"><span class="dot" style="background:var(--accent-green)"></span> Hornworm Breeding Dashboard</div>
-      <div id="breeding-loading" class="loading"><div class="spinner"></div>Loading breeding data...</div>
-      <div id="breeding-content" style="display:none">
-        <div class="stats-grid" id="breeding-stats"></div>
-        <div class="chart-card" style="margin-bottom:24px">
-          <div class="chart-title">Egg Production — Actual vs Predicted</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
-            Model: 500 eggs/female · 85% collection rate · 50% female ratio · 15% pre-emergence mortality · emergence days 4-6 · gamma curve peaking night 8
-            <br><span style="color:#34d399">●</span> Real collection &nbsp; <span style="color:#f87171">●</span> Interpolated (skipped day, split evenly) &nbsp; <span style="color:#818cf8">┈</span> Predicted
-          </div>
-          <div class="chart-wrap" style="height:320px"><canvas id="chart-egg-prediction"></canvas></div>
-        </div>
-        <div class="charts-row">
-          <div class="chart-card full">
-            <div class="chart-title">Daily Egg Collection (Weight & Count)</div>
-            <div class="chart-wrap"><canvas id="chart-eggs"></canvas></div>
-          </div>
-        </div>
-        <div class="charts-row">
-          <div class="chart-card full">
-            <div class="chart-title">Daily Pre-Pupae Collection & Mortality</div>
-            <div class="chart-wrap"><canvas id="chart-prepupae"></canvas></div>
-          </div>
-        </div>
-        <div class="chart-card" style="margin-bottom:24px">
-          <div class="chart-title">Mortality Rate by Shelf</div>
-          <div class="chart-wrap" style="height:350px"><canvas id="chart-shelf-mortality"></canvas></div>
+        <div class="cc">
+          <div class="ct">Wholesale vs Retail</div>
+          <div class="cw"><canvas id="chart-tier"></canvas></div>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
-    // ============================================================
-    // STATE
-    // ============================================================
-    let currentSection = 'sales';
-    let startDate, endDate;
-    const charts = {};
+  <!-- ========== SHIPPING SECTION ========== -->
+  <div class="section" id="sec-shipping">
+    <div id="shipping-loading" class="loading"><div class="spinner"></div>Loading shipping data...</div>
+    <div id="shipping-content" style="display:none">
+      <div class="sec" style="margin-top:0">
+        <span class="sec-dot" style="background:var(--ups-gold)"></span>
+        <span class="sec-label" style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 28" width="16" height="19"><path d="M12 1C6 1 2 4 2 4v12c0 6 10 11 10 11s10-5 10-11V4s-4-3-10-3z" fill="#351C15"/><path d="M12 3C7 3 4 5.5 4 5.5v10.5c0 5 8 9 8 9s8-4 8-9V5.5S17 3 12 3z" fill="#FFB500"/></svg>UPS Shipping Report</span>
+        <span class="sec-line"></span>
+        <span class="sec-note">excl. Chewy (FedEx 3rd party, $0)</span>
+      </div>
+      <div id="shipping-stats" class="stats-grid"></div>
+      <div id="shipping-bars"></div>
+      <div class="cg">
+        <div class="cc full">
+          <div class="ct">Daily Shipping Cost & Shipments</div>
+          <div class="cw"><canvas id="chart-daily-shipping"></canvas></div>
+        </div>
+      </div>
+      <div class="cg">
+        <div class="cc">
+          <div class="ct">Cost by Service</div>
+          <div class="cw"><canvas id="chart-service"></canvas></div>
+        </div>
+        <div class="cc">
+          <div class="ct">Shipments by State</div>
+          <div class="cw"><canvas id="chart-state"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    // Chart.js defaults
-    Chart.defaults.color = '#94a3b8';
-    Chart.defaults.borderColor = '#1e293b';
-    Chart.defaults.font.family = "'DM Sans', sans-serif";
-    Chart.defaults.font.size = 12;
-    Chart.defaults.plugins.legend.labels.boxWidth = 12;
-    Chart.defaults.plugins.legend.labels.padding = 16;
+  <!-- ========== BREEDING SECTION ========== -->
+  <div class="section" id="sec-breeding">
+    <div class="sec" style="margin-top:0">
+      <span class="sec-dot" style="background:var(--green)"></span>
+      <span class="sec-label">Hornworm Breeding Dashboard</span>
+      <span class="sec-line"></span>
+    </div>
+    <div id="breeding-loading" class="loading"><div class="spinner"></div>Loading breeding data...</div>
+    <div id="breeding-content" style="display:none">
+      <div class="stats-grid" id="breeding-stats"></div>
+      <div class="cc full" style="margin-bottom:16px">
+        <div class="ct">Egg Production — Actual vs Predicted</div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:10px">
+          Model: 500 eggs/female · 85% collection rate · 50% female ratio · 15% pre-emergence mortality · emergence days 4-6 · gamma curve peaking night 8
+          <br><span style="color:var(--green)">●</span> Real collection &nbsp; <span style="color:var(--red)">●</span> Interpolated (skipped day) &nbsp; <span style="color:var(--purple)">┈</span> Predicted
+        </div>
+        <div class="cw-tall"><canvas id="chart-egg-prediction"></canvas></div>
+      </div>
+      <div class="cg">
+        <div class="cc full"><div class="ct">Daily Egg Collection (Weight & Count)</div><div class="cw"><canvas id="chart-eggs"></canvas></div></div>
+      </div>
+      <div class="cg">
+        <div class="cc full"><div class="ct">Daily Pre-Pupae Collection & Mortality</div><div class="cw"><canvas id="chart-prepupae"></canvas></div></div>
+      </div>
+      <div class="cc" style="margin-bottom:16px"><div class="ct">Mortality Rate by Shelf</div><div class="cw-tall"><canvas id="chart-shelf-mortality"></canvas></div></div>
+    </div>
+  </div>
 
-    // ============================================================
-    // DATE MANAGEMENT
-    // ============================================================
-    function setPreset(preset, el) {
-      const end = new Date();
-      let start = new Date();
-      const days = parseInt(preset);
-      start.setDate(end.getDate() - days + 1);
+</div>
 
-      startDate = fmt(start);
-      endDate = fmt(end);
-      document.getElementById('startDate').value = startDate;
-      document.getElementById('endDate').value = endDate;
+<script>
+  let currentSection = 'sales';
+  let startDate, endDate;
+  const charts = {};
 
-      document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
-      if (el) el.classList.add('active');
-      refreshData();
-    }
+  Chart.defaults.color = '#64748b';
+  Chart.defaults.borderColor = '#1a2235';
+  Chart.defaults.font.family = "'DM Sans',sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.plugins.legend.labels.boxWidth = 10;
+  Chart.defaults.plugins.legend.labels.padding = 12;
 
-    function fmt(d) {
-      return d.toISOString().split('T')[0];
-    }
+  function setPreset(preset, el) {
+    const end = new Date(); let start = new Date();
+    start.setDate(end.getDate() - parseInt(preset) + 1);
+    startDate = fmt(start); endDate = fmt(end);
+    document.getElementById('startDate').value = startDate;
+    document.getElementById('endDate').value = endDate;
+    document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    refreshData();
+  }
+  function fmt(d) { return d.toISOString().split('T')[0]; }
+  document.getElementById('startDate').addEventListener('change', () => { startDate = document.getElementById('startDate').value; document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active')); refreshData(); });
+  document.getElementById('endDate').addEventListener('change', () => { endDate = document.getElementById('endDate').value; document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active')); refreshData(); });
 
-    document.getElementById('startDate').addEventListener('change', () => {
-      startDate = document.getElementById('startDate').value;
-      document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
-      refreshData();
-    });
-    document.getElementById('endDate').addEventListener('change', () => {
-      endDate = document.getElementById('endDate').value;
-      document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
-      refreshData();
-    });
+  function showSection(name, el) {
+    currentSection = name;
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(`sec-${name}`).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    refreshData();
+  }
 
-    // ============================================================
-    // NAVIGATION
-    // ============================================================
-    function showSection(name, el) {
-      currentSection = name;
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      document.getElementById(`sec-${name}`).classList.add('active');
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      if (el) el.classList.add('active');
-      refreshData();
-    }
+  async function api(path) {
+    const res = await fetch(`/dashboard/api${path}`);
+    if (res.status === 401) { window.location.reload(); return null; }
+    return res.json();
+  }
 
-    // ============================================================
-    // API CALLS
-    // ============================================================
-    async function api(path) {
-      const res = await fetch(`/dashboard/api${path}`);
-      if (res.status === 401) { window.location.reload(); return null; }
-      return res.json();
-    }
+  function refreshData() {
+    if (currentSection === 'sales') loadSales();
+    else if (currentSection === 'shipping') loadShipping();
+    else if (currentSection === 'breeding') loadBreeding();
+  }
 
-    // ============================================================
-    // REFRESH
-    // ============================================================
-    async function refreshData() {
-      if (currentSection === 'sales') await loadSales();
-      else if (currentSection === 'shipping') await loadShipping();
-      else if (currentSection === 'breeding') await loadBreeding();
-    }
+  // ============================================================
+  // SALES
+  // ============================================================
+  async function loadSales() {
+    show('sales-loading'); hide('sales-content');
+    try {
+      const [summary, daily] = await Promise.all([
+        api(`/sales/summary?start_date=${startDate}&end_date=${endDate}`),
+        api(`/sales/daily?start_date=${startDate}&end_date=${endDate}`),
+      ]);
+      if (!summary) return;
 
-    // ============================================================
-    // SALES
-    // ============================================================
-    async function loadSales() {
-      show('sales-loading'); hide('sales-content');
-      try {
-        const [summary, daily] = await Promise.all([
-          api(`/sales/summary?start_date=${startDate}&end_date=${endDate}`),
-          api(`/sales/daily?start_date=${startDate}&end_date=${endDate}`),
-        ]);
+      const retailRev = summary.byTier['tier-retail']?.revenue || 0;
+      const wholesaleRev = summary.byTier['tier-wholesale']?.revenue || 0;
+      const totalRev = summary.totalRevenue || 0;
+      const hwCups = summary.cupsSold?.hornworm || 0;
+      const swCups = summary.cupsSold?.silkworm || 0;
+      const ch = summary.byChannel || {};
+      const chewyRev = ch.chewy?.revenue || 0;
+      const amazonRev = (ch['amazon-upnorth']?.revenue || 0) + (ch['amazon-pioneer']?.revenue || 0);
+      const webRev = ch.retail?.revenue || 0;
+      const ebayRev = ch.ebay?.revenue || 0;
+      const chewyCups = ch.chewy?.cups || 0;
+      const amazonCups = (ch['amazon-upnorth']?.cups || 0) + (ch['amazon-pioneer']?.cups || 0);
+      const webCups = ch.retail?.cups || 0;
+      const ebayCups = ch.ebay?.cups || 0;
 
-        if (!summary) return;
+      document.getElementById('sales-kpis').innerHTML = `
+        ${kpiCard('Total Revenue', '$'+n(totalRev), summary.totalOrders+' orders', 'green', 'green')}
+        ${kpiCard('Net Profit', '$'+n(totalRev * 0.747), (74.7).toFixed(1)+'% margin', 'green', 'green')}
+        ${kpiCard('Hornworm Cups', n(hwCups,0), 'physical cups', 'green', 'green')}
+        ${kpiCard('Silkworm Cups', n(swCups,0), 'physical cups', 'green', 'green')}
+        ${kpiCard('UPS Allocation', '—', 'see shipping tab', 'yellow', 'ups-gold')}
+        ${kpiCard('Avg Order Value', '$'+n(totalRev / (summary.totalOrders||1)), 'per order', 'green', 'green')}
+      `;
 
-        // Stats cards
-        const retailRev = summary.byTier['tier-retail']?.revenue || 0;
-        const wholesaleRev = summary.byTier['tier-wholesale']?.revenue || 0;
-        const retailPct = summary.totalRevenue > 0 ? ((retailRev / summary.totalRevenue) * 100).toFixed(0) : 0;
+      document.getElementById('sales-channels').innerHTML = `
+        <div class="ch" style="border-left-color:var(--chewy)">
+          <div class="ch-name"><span style="color:var(--chewy)"><svg viewBox="0 0 100 28" width="56" height="16"><text x="0" y="22" font-family="Arial,sans-serif" font-weight="900" font-size="24" fill="#1C49C2">chewy</text></svg></span><span class="pay pay-r">45 Day Pay</span></div>
+          <div class="ch-row"><div><div class="ch-metric">Sales</div><div class="ch-val" style="color:var(--chewy)">$${n(chewyRev)}</div></div><div><div class="ch-metric">Cups</div><div class="ch-val">${n(chewyCups,0)}</div></div></div>
+        </div>
+        <div class="ch" style="border-left-color:var(--amazon)">
+          <div class="ch-name"><span style="color:var(--amazon)"><svg viewBox="0 0 120 30" width="66" height="16"><text x="0" y="20" font-family="Arial,sans-serif" font-weight="900" font-size="20" fill="#FF9900">amazon</text><path d="M8 25 Q60 31 112 25" stroke="#FF9900" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg></span><span class="pay pay-y">2 Wk Bulk</span></div>
+          <div class="ch-row"><div><div class="ch-metric">Sales</div><div class="ch-val" style="color:var(--amazon)">$${n(amazonRev)}</div></div><div><div class="ch-metric">Cups</div><div class="ch-val">${n(amazonCups,0)}</div></div></div>
+        </div>
+        <div class="ch" style="border-left-color:var(--shopify)">
+          <div class="ch-name"><span style="color:var(--shopify)"><svg viewBox="0 0 20 23" width="14" height="16"><path d="M15.7 5.5c0-.1-.1-.2-.3-.2s-1.8-.1-1.8-.1-1.2-1.2-1.4-1.3c-.1-.1-.2-.1-.3-.1l-.8 12.7 4.5-1s-.9-9.9-.9-10zm-5.3 2.2l-.6 1.8s-.7-.4-1.6-.3c-1.2.1-1.2.8-1.2 1 .1 1 2.7 1.2 2.9 3.6.1 1.9-1 3.2-2.6 3.3-1.9.1-3-1-3-1l.4-1.7s1.1.8 1.9.7c.6 0 .8-.4.8-.7-.1-1.3-2.2-1.2-2.4-3.4-.1-1.9 1.1-3.8 3.8-4 1-.1 1.6.3 1.6.3z" fill="#96bf48"/></svg> Website</span><span class="pay pay-g">Immediate</span></div>
+          <div class="ch-row"><div><div class="ch-metric">Sales</div><div class="ch-val" style="color:var(--shopify)">$${n(webRev)}</div></div><div><div class="ch-metric">Cups</div><div class="ch-val">${n(webCups,0)}</div></div></div>
+        </div>
+        <div class="ch" style="border-left-color:var(--ebay-blue)">
+          <div class="ch-name"><span><svg viewBox="0 0 70 24" width="46" height="15"><text x="0" y="19" font-family="Arial,sans-serif" font-weight="900" font-size="22"><tspan fill="#e53238">e</tspan><tspan fill="#0064D2">b</tspan><tspan fill="#f5af02">a</tspan><tspan fill="#86b817">y</tspan></text></svg></span><span class="pay pay-y">2\u20133 Days</span></div>
+          <div class="ch-row"><div><div class="ch-metric">Sales</div><div class="ch-val" style="color:var(--ebay-blue)">$${n(ebayRev)}</div></div><div><div class="ch-metric">Cups</div><div class="ch-val">${n(ebayCups,0)}</div></div></div>
+        </div>
+      `;
 
-        document.getElementById('sales-stats').innerHTML = `
-          ${statCard('Total Revenue', '$' + n(summary.totalRevenue), `${summary.totalOrders} orders`, '--accent-blue')}
-          ${statCard('Wholesale', '$' + n(wholesaleRev), `${summary.byTier['tier-wholesale']?.orders || 0} orders`, '--accent-purple')}
-          ${statCard('Retail', '$' + n(retailRev), `${retailPct}% of total`, '--accent-teal')}
-          ${statCard('Total Cups Sold', n(summary.cupsSold.total, 0), `HW: ${summary.cupsSold.hornworm} · SW: ${summary.cupsSold.silkworm}`, '--accent-amber')}
-          ${statCard('Hornworm Cups', n(summary.cupsSold.hornworm, 0), 'physical cups', '--accent-red')}
-          ${statCard('Silkworm Cups', n(summary.cupsSold.silkworm, 0), 'physical cups', '--accent-green')}
-        `;
+      const wsOrders = summary.byTier['tier-wholesale']?.orders || 0;
+      const wsCups = summary.byTier['tier-wholesale']?.cups || 0;
+      document.getElementById('sales-wholesale').innerHTML = `
+        ${statCard('Wholesale Revenue', '$'+n(wholesaleRev), wsOrders+' orders', '--purple')}
+        ${statCard('Wholesale Cups', n(wsCups,0), 'physical cups', '--purple')}
+      `;
 
-        // Daily chart
-        if (daily && daily.length) {
-          makeChart('chart-daily-sales', 'bar', {
-            labels: daily.map(d => shortDate(d.date)),
-            datasets: [
-              { label: 'Revenue', data: daily.map(d => d.revenue), backgroundColor: 'rgba(56,189,248,0.6)', borderRadius: 4, yAxisID: 'y', order: 2 },
-              { label: 'Cups', data: daily.map(d => d.cups), type: 'line', borderColor: '#fbbf24', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, yAxisID: 'y1', order: 1 },
-            ]
-          }, { y: { position: 'left', title: { display: true, text: 'Revenue ($)' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Cups' } } });
-        }
-
-        // Channel chart
-        const channels = Object.entries(summary.byChannel).filter(([,v]) => v.revenue > 0);
-        if (channels.length) {
-          const channelColors = { retail: '#38bdf8', wholesale: '#818cf8', chewy: '#f472b6', 'amazon-pioneer': '#fbbf24', 'amazon-upnorth': '#fb923c', ebay: '#34d399', tradeshow: '#94a3b8' };
-          makeChart('chart-channel', 'doughnut', {
-            labels: channels.map(([k]) => channelLabel(k)),
-            datasets: [{ data: channels.map(([,v]) => v.revenue), backgroundColor: channels.map(([k]) => channelColors[k] || '#64748b'), borderWidth: 0 }]
-          }, {}, { cutout: '65%' });
-        }
-
-        // Cups by type chart
-        const cupTypes = Object.entries(summary.byProductType).filter(([,v]) => v.cups > 0);
-        if (cupTypes.length) {
-          const typeColors = { 'hornworm-cup': '#f87171', 'silkworm-cup': '#34d399', 'waxworm-cup': '#fbbf24', 'superworm-cup': '#fb923c', 'mealworm-cup': '#818cf8', 'bsfl-cup': '#2dd4bf' };
-          makeChart('chart-cups', 'doughnut', {
-            labels: cupTypes.map(([k]) => k.replace('-cup', '').replace('-', ' ')),
-            datasets: [{ data: cupTypes.map(([,v]) => v.cups), backgroundColor: cupTypes.map(([k]) => typeColors[k] || '#64748b'), borderWidth: 0 }]
-          }, {}, { cutout: '65%' });
-        }
-
-        // Tier chart
-        makeChart('chart-tier', 'bar', {
-          labels: ['Wholesale', 'Retail'],
+      if (daily && daily.length) {
+        makeChart('chart-daily-sales', 'bar', {
+          labels: daily.map(d => shortDate(d.date)),
           datasets: [
-            { label: 'Revenue', data: [wholesaleRev, retailRev], backgroundColor: ['rgba(129,140,248,0.7)', 'rgba(45,212,191,0.7)'], borderRadius: 6 },
+            { label: 'Revenue', data: daily.map(d => d.revenue), backgroundColor: 'rgba(34,197,94,0.5)', borderRadius: 4, yAxisID: 'y', order: 2 },
+            { label: 'Cups', data: daily.map(d => d.cups), type: 'line', borderColor: '#fb923c', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, pointBackgroundColor: '#fb923c', yAxisID: 'y1', order: 1, borderWidth: 2 },
           ]
-        }, { y: { beginAtZero: true }, x: {} }, { indexAxis: 'y' });
-
-        // Product cups bar chart
-        if (cupTypes.length) {
-          const typeColors2 = { 'hornworm-cup': 'rgba(248,113,113,0.7)', 'silkworm-cup': 'rgba(52,211,153,0.7)', 'waxworm-cup': 'rgba(251,191,36,0.7)', 'superworm-cup': 'rgba(251,146,60,0.7)', 'mealworm-cup': 'rgba(129,140,248,0.7)', 'bsfl-cup': 'rgba(45,212,191,0.7)' };
-          makeChart('chart-product-cups', 'bar', {
-            labels: cupTypes.map(([k]) => k.replace('-cup', '')),
-            datasets: [{ label: 'Cups', data: cupTypes.map(([,v]) => v.cups), backgroundColor: cupTypes.map(([k]) => typeColors2[k] || 'rgba(100,116,139,0.7)'), borderRadius: 6 }]
-          });
-        }
-
-        hide('sales-loading'); show('sales-content');
-      } catch (err) {
-        console.error('Sales load error:', err);
-        document.getElementById('sales-loading').innerHTML = '<div style="color:var(--accent-red)">Failed to load sales data</div>';
+        }, { y: { position: 'left', title: { display: true, text: 'Revenue ($)' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Cups' } } });
       }
-    }
 
-    // ============================================================
-    // SHIPPING
-    // ============================================================
-    async function loadShipping() {
-      show('shipping-loading'); hide('shipping-content');
-      try {
-        const [summary, daily, byService, byState] = await Promise.all([
-          api(`/shipping/summary?start_date=${startDate}&end_date=${endDate}`),
-          api(`/shipping/daily?start_date=${startDate}&end_date=${endDate}`),
-          api(`/shipping/by-service?start_date=${startDate}&end_date=${endDate}`),
-          api(`/shipping/by-state?start_date=${startDate}&end_date=${endDate}`),
-        ]);
-
-        if (!summary) return;
-
-        const margin = parseFloat(summary.total_revenue) - parseFloat(summary.total_label_cost) - parseFloat(summary.total_cogs);
-
-        document.getElementById('shipping-stats').innerHTML = `
-          ${statCard('Shipments', n(summary.total_shipments, 0), `${summary.total_orders} orders`, '--accent-purple')}
-          ${statCard('Label Cost', '$' + n(summary.total_label_cost), 'avg $' + n(summary.avg_label_cost), '--accent-red')}
-          ${statCard('Revenue', '$' + n(summary.total_revenue), 'from shipped orders', '--accent-blue')}
-          ${statCard('Margin', '$' + n(margin), 'rev - cost - cogs', margin >= 0 ? '--accent-green' : '--accent-red')}
-          ${statCard('Delivered', n(summary.delivered, 0), `${summary.in_transit} in transit`, '--accent-green')}
-          ${statCard('Late / Exceptions', n(summary.late_deliveries, 0) + ' / ' + n(summary.exceptions, 0), '', '--accent-amber')}
-        `;
-
-        // Daily shipping chart
-        if (daily && daily.length) {
-          makeChart('chart-daily-shipping', 'bar', {
-            labels: daily.map(d => shortDate(d.date)),
-            datasets: [
-              { label: 'Label Cost', data: daily.map(d => parseFloat(d.label_cost)), backgroundColor: 'rgba(129,140,248,0.6)', borderRadius: 4, yAxisID: 'y' },
-              { label: 'Shipments', data: daily.map(d => parseInt(d.shipments)), type: 'line', borderColor: '#38bdf8', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, yAxisID: 'y1' },
-            ]
-          }, { y: { position: 'left', title: { display: true, text: 'Cost ($)' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Shipments' } } });
-        }
-
-        // Service breakdown
-        if (byService && byService.length) {
-          const svcColors = ['rgba(56,189,248,0.7)', 'rgba(129,140,248,0.7)', 'rgba(244,114,182,0.7)', 'rgba(251,191,36,0.7)', 'rgba(52,211,153,0.7)'];
-          makeChart('chart-service', 'doughnut', {
-            labels: byService.map(s => s.service_code?.replace('ups_', '').replace(/_/g, ' ') || 'unknown'),
-            datasets: [{ data: byService.map(s => parseFloat(s.total_cost)), backgroundColor: svcColors, borderWidth: 0 }]
-          }, {}, { cutout: '65%' });
-        }
-
-        // State breakdown
-        if (byState && byState.length) {
-          const top10 = byState.slice(0, 10);
-          makeChart('chart-state', 'bar', {
-            labels: top10.map(s => s.state),
-            datasets: [{ label: 'Shipments', data: top10.map(s => parseInt(s.shipments)), backgroundColor: 'rgba(45,212,191,0.6)', borderRadius: 4 }]
-          });
-        }
-
-        hide('shipping-loading'); show('shipping-content');
-      } catch (err) {
-        console.error('Shipping load error:', err);
-        document.getElementById('shipping-loading').innerHTML = '<div style="color:var(--accent-red)">Failed to load shipping data</div>';
+      const channels = Object.entries(summary.byChannel).filter(([,v]) => v.revenue > 0);
+      if (channels.length) {
+        const channelColors = { retail: '#96bf48', wholesale: '#818cf8', chewy: '#1C49C2', 'amazon-pioneer': '#FF9900', 'amazon-upnorth': '#FF9900', ebay: '#0064D2', tradeshow: '#64748b' };
+        makeChart('chart-channel', 'doughnut', {
+          labels: channels.map(([k]) => channelLabel(k)),
+          datasets: [{ data: channels.map(([,v]) => v.revenue), backgroundColor: channels.map(([k]) => channelColors[k] || '#64748b'), borderWidth: 0 }]
+        }, {}, { cutout: '68%' });
       }
-    }
 
-    // ============================================================
-    // BREEDING
-    // ============================================================
-    async function loadBreeding() {
-      show('breeding-loading'); hide('breeding-content');
-      try {
-        const [eggs, prepupae, prediction] = await Promise.all([
-          api(`/breeding/eggs?start_date=${startDate}&end_date=${endDate}`),
-          api(`/breeding/prepupae?start_date=${startDate}&end_date=${endDate}`),
-          api(`/breeding/egg-prediction?start_date=${startDate}&end_date=${endDate}`),
-        ]);
-
-        if (!eggs) return;
-
-        // Prediction stats
-        const predSummary = prediction?.summary || {};
-        const accuracyColor = predSummary.accuracy 
-          ? (Math.abs(parseFloat(predSummary.variancePct)) < 15 ? '--accent-green' : '--accent-amber')
-          : '--text-muted';
-        const varianceSign = predSummary.variance >= 0 ? '+' : '';
-
-        document.getElementById('breeding-stats').innerHTML = `
-          ${statCard('Total Eggs', n(eggs.summary.total_eggs, 0), `${eggs.summary.total_collections} collections`, '--accent-green')}
-          ${statCard('Egg Weight', n(eggs.summary.total_weight, 1) + 'g', 'avg ' + n(eggs.summary.avg_weight, 1) + 'g/day', '--accent-teal')}
-          ${statCard('Predicted Eggs', n(predSummary.totalPredicted || 0, 0), 'from pre-pupae model', '--accent-purple')}
-          ${statCard('Model Accuracy', predSummary.accuracy ? predSummary.accuracy + '%' : 'N/A', predSummary.variance != null ? varianceSign + n(predSummary.variance, 0) + ' variance' : '', accuracyColor)}
-          ${statCard('Pre-Pupae Collected', n(prepupae.summary.total_collected, 0), `${prepupae.summary.total_entries} entries`, '--accent-amber')}
-          ${statCard('Mortality Rate', n(prepupae.summary.mortality_rate, 1) + '%', n(prepupae.summary.total_dead, 0) + ' dead', parseFloat(prepupae.summary.mortality_rate) > 10 ? '--accent-red' : '--accent-green')}
-        `;
-
-        // Egg prediction chart — the hero chart
-        if (prediction?.timeline && prediction.timeline.length) {
-          const timeline = prediction.timeline;
-          
-          // Build point colors: green for real, red for interpolated, transparent for no data
-          const actualPointColors = timeline.map(d => {
-            if (d.actual > 0 && d.isInterpolated) return '#f87171'; // red for interpolated
-            if (d.actual > 0 && d.isReal) return '#34d399'; // green for real
-            return 'transparent';
-          });
-          const actualPointBorders = timeline.map(d => {
-            if (d.actual > 0 && d.isInterpolated) return '#f87171';
-            if (d.actual > 0 && d.isReal) return '#34d399';
-            return 'transparent';
-          });
-          const actualPointRadii = timeline.map(d => d.actual > 0 ? 5 : 0);
-
-          makeChart('chart-egg-prediction', 'line', {
-            labels: timeline.map(d => shortDate(d.date)),
-            datasets: [
-              {
-                label: 'Actual Eggs',
-                data: timeline.map(d => d.actual > 0 ? d.actual : null),
-                borderColor: '#34d399',
-                backgroundColor: 'rgba(52,211,153,0.1)',
-                fill: false,
-                tension: 0.3,
-                pointRadius: actualPointRadii,
-                pointBackgroundColor: actualPointColors,
-                pointBorderColor: actualPointBorders,
-                pointBorderWidth: 2,
-                borderWidth: 2.5,
-                spanGaps: true,
-              },
-              {
-                label: 'Predicted Eggs',
-                data: timeline.map(d => d.predicted > 0 ? d.predicted : null),
-                borderColor: '#818cf8',
-                backgroundColor: 'rgba(129,140,248,0.05)',
-                fill: false,
-                borderDash: [6, 3],
-                tension: 0.3,
-                pointRadius: 3,
-                pointBackgroundColor: '#818cf8',
-                borderWidth: 2,
-                spanGaps: true,
-              },
-            ]
-          }, {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Egg Count' },
-            },
-          });
-        }
-
-        // Eggs daily chart
-        if (eggs.daily && eggs.daily.length) {
-          makeChart('chart-eggs', 'bar', {
-            labels: eggs.daily.map(d => shortDate(d.date)),
-            datasets: [
-              { label: 'Eggs', data: eggs.daily.map(d => parseInt(d.total_eggs)), backgroundColor: 'rgba(52,211,153,0.6)', borderRadius: 4, yAxisID: 'y' },
-              { label: 'Weight (g)', data: eggs.daily.map(d => parseFloat(d.total_weight)), type: 'line', borderColor: '#2dd4bf', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, yAxisID: 'y1' },
-            ]
-          }, { y: { position: 'left', title: { display: true, text: 'Egg Count' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Weight (g)' } } });
-        }
-
-        // Pre-pupae daily
-        if (prepupae.daily && prepupae.daily.length) {
-          makeChart('chart-prepupae', 'bar', {
-            labels: prepupae.daily.map(d => shortDate(d.date)),
-            datasets: [
-              { label: 'Alive', data: prepupae.daily.map(d => parseInt(d.total_alive)), backgroundColor: 'rgba(251,191,36,0.6)', borderRadius: 4 },
-              { label: 'Dead', data: prepupae.daily.map(d => parseInt(d.total_dead)), backgroundColor: 'rgba(248,113,113,0.6)', borderRadius: 4 },
-            ]
-          }, { x: { stacked: true }, y: { stacked: true } });
-        }
-
-        // Shelf mortality
-        if (prepupae.byShelf && prepupae.byShelf.length) {
-          makeChart('chart-shelf-mortality', 'bar', {
-            labels: prepupae.byShelf.map(s => 'S' + s.shelf_number),
-            datasets: [
-              { label: 'Collected', data: prepupae.byShelf.map(s => parseInt(s.total_collected)), backgroundColor: 'rgba(251,191,36,0.5)', borderRadius: 3 },
-              { label: 'Dead', data: prepupae.byShelf.map(s => parseInt(s.total_dead)), backgroundColor: 'rgba(248,113,113,0.7)', borderRadius: 3 },
-            ]
-          });
-        }
-
-        hide('breeding-loading'); show('breeding-content');
-      } catch (err) {
-        console.error('Breeding load error:', err);
-        document.getElementById('breeding-loading').innerHTML = '<div style="color:var(--accent-red)">Failed to load breeding data</div>';
+      const cupTypes = Object.entries(summary.byProductType).filter(([,v]) => v.cups > 0);
+      if (cupTypes.length) {
+        const typeColors = { 'hornworm-cup': '#ef4444', 'silkworm-cup': '#22c55e', 'waxworm-cup': '#eab308', 'superworm-cup': '#fb923c', 'mealworm-cup': '#818cf8', 'bsfl-cup': '#2dd4bf' };
+        makeChart('chart-cups', 'doughnut', {
+          labels: cupTypes.map(([k]) => k.replace('-cup', '').replace('-', ' ')),
+          datasets: [{ data: cupTypes.map(([,v]) => v.cups), backgroundColor: cupTypes.map(([k]) => typeColors[k] || '#64748b'), borderWidth: 0 }]
+        }, {}, { cutout: '68%' });
       }
+
+      if (channels.length) {
+        makeChart('chart-channel-cups', 'bar', {
+          labels: channels.map(([k]) => channelLabel(k)),
+          datasets: [
+            { label: 'Hornworm', data: channels.map(([,v]) => v.cupsByType?.['hornworm-cup'] || 0), backgroundColor: 'rgba(239,68,68,0.6)', borderRadius: 3 },
+            { label: 'Silkworm', data: channels.map(([,v]) => v.cupsByType?.['silkworm-cup'] || 0), backgroundColor: 'rgba(34,197,94,0.6)', borderRadius: 3 },
+            { label: 'Other', data: channels.map(([,v]) => { const hw=v.cupsByType?.['hornworm-cup']||0; const sw=v.cupsByType?.['silkworm-cup']||0; return Math.max(0,(v.cups||0)-hw-sw); }), backgroundColor: 'rgba(234,179,8,0.4)', borderRadius: 3 },
+          ]
+        }, { x: { stacked: true }, y: { stacked: true, beginAtZero: true } });
+      }
+
+      makeChart('chart-tier', 'bar', {
+        labels: ['Wholesale', 'Retail'],
+        datasets: [{ label: 'Revenue', data: [wholesaleRev, retailRev], backgroundColor: ['rgba(129,140,248,0.7)', 'rgba(150,191,72,0.7)'], borderRadius: 6 }]
+      }, { y: { beginAtZero: true }, x: {} }, { indexAxis: 'y' });
+
+      hide('sales-loading'); show('sales-content');
+    } catch (err) {
+      console.error('Sales load error:', err);
+      document.getElementById('sales-loading').innerHTML = '<div style="color:var(--red)">Failed to load sales data</div>';
     }
+  }
 
-    // ============================================================
-    // CHART HELPERS
-    // ============================================================
-    function makeChart(id, type, data, scaleOpts = {}, extraOpts = {}) {
-      if (charts[id]) charts[id].destroy();
-      const ctx = document.getElementById(id)?.getContext('2d');
-      if (!ctx) return;
+  // ============================================================
+  // SHIPPING
+  // ============================================================
+  async function loadShipping() {
+    show('shipping-loading'); hide('shipping-content');
+    try {
+      const [summary, daily, byService, byState] = await Promise.all([
+        api(`/shipping/summary?start_date=${startDate}&end_date=${endDate}`),
+        api(`/shipping/daily?start_date=${startDate}&end_date=${endDate}`),
+        api(`/shipping/by-service?start_date=${startDate}&end_date=${endDate}`),
+        api(`/shipping/by-state?start_date=${startDate}&end_date=${endDate}`),
+      ]);
+      if (!summary) return;
 
-      const isDoughnut = type === 'doughnut';
-      charts[id] = new Chart(ctx, {
-        type,
-        data,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { intersect: false, mode: isDoughnut ? 'nearest' : 'index' },
-          plugins: {
-            legend: { display: true, position: isDoughnut ? 'right' : 'top' },
-            tooltip: {
-              backgroundColor: '#131a2b',
-              borderColor: '#1e293b',
-              borderWidth: 1,
-              titleColor: '#e2e8f0',
-              bodyColor: '#94a3b8',
-              padding: 12,
-              cornerRadius: 8,
-              callbacks: isDoughnut ? {} : {
-                label: function(ctx) {
-                  let val = ctx.parsed?.y ?? ctx.parsed;
-                  if (typeof val === 'number') {
-                    if (ctx.dataset.label?.includes('Revenue') || ctx.dataset.label?.includes('Cost') || ctx.dataset.label?.includes('Margin'))
-                      val = '$' + val.toFixed(2);
-                    else if (ctx.dataset.label?.includes('Weight'))
-                      val = val.toFixed(1) + 'g';
-                  }
-                  return ctx.dataset.label + ': ' + val;
-                }
-              }
-            },
-          },
-          scales: isDoughnut ? {} : scaleOpts,
-          ...extraOpts,
+      const custPaid = parseFloat(summary.total_customer_shipping || 0);
+      const labelCost = parseFloat(summary.total_label_cost || 0);
+
+      document.getElementById('shipping-stats').innerHTML = `
+        ${statCard('Customer Paid Shipping', '$'+n(custPaid), 'what customers paid', '--green')}
+        ${statCard('ShipStation Label Cost', '$'+n(labelCost), 'what SS thinks we paid', '--yellow')}
+        ${statCard('Shipments', n(summary.total_shipments,0), summary.total_orders+' orders', '--purple')}
+        ${statCard('Delivered', n(summary.delivered,0), (summary.in_transit||0)+' in transit', '--green')}
+        ${statCard('Late / Exceptions', n(summary.late_deliveries,0)+' / '+n(summary.exceptions,0), '', '--amber')}
+      `;
+
+      if (labelCost > 0) {
+        const custPct = Math.min(100, (custPaid / labelCost * 100)).toFixed(1);
+        document.getElementById('shipping-bars').innerHTML = `
+          <div class="cc" style="margin-bottom:16px">
+            <div class="ct">Shipping Cost Comparison</div>
+            <div class="bars">
+              <div class="bar-r"><div class="bar-l">Customer Paid</div><div class="bar-t"><div class="bar-f" style="width:${custPct}%;background:rgba(34,197,94,0.3);color:var(--green)">$${n(custPaid)}</div></div></div>
+              <div class="bar-r"><div class="bar-l">ShipStation Labels</div><div class="bar-t"><div class="bar-f" style="width:100%;background:rgba(234,179,8,0.25);color:var(--yellow)">$${n(labelCost)}</div></div></div>
+            </div>
+          </div>`;
+      }
+
+      if (daily && daily.length) {
+        makeChart('chart-daily-shipping', 'bar', {
+          labels: daily.map(d => shortDate(d.date)),
+          datasets: [
+            { label: 'Label Cost', data: daily.map(d => parseFloat(d.label_cost)), backgroundColor: 'rgba(129,140,248,0.6)', borderRadius: 4, yAxisID: 'y' },
+            { label: 'Shipments', data: daily.map(d => parseInt(d.shipments)), type: 'line', borderColor: '#38bdf8', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, yAxisID: 'y1' },
+          ]
+        }, { y: { position: 'left', title: { display: true, text: 'Cost ($)' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Shipments' } } });
+      }
+
+      if (byService && byService.length) {
+        const svcColors = ['rgba(56,189,248,0.7)', 'rgba(129,140,248,0.7)', 'rgba(244,114,182,0.7)', 'rgba(251,191,36,0.7)', 'rgba(52,211,153,0.7)'];
+        makeChart('chart-service', 'doughnut', {
+          labels: byService.map(s => s.service_code?.replace('ups_', '').replace(/_/g, ' ') || 'unknown'),
+          datasets: [{ data: byService.map(s => parseFloat(s.total_cost)), backgroundColor: svcColors, borderWidth: 0 }]
+        }, {}, { cutout: '68%' });
+      }
+
+      if (byState && byState.length) {
+        const top10 = byState.slice(0, 10);
+        makeChart('chart-state', 'bar', {
+          labels: top10.map(s => s.state),
+          datasets: [{ label: 'Shipments', data: top10.map(s => parseInt(s.shipments)), backgroundColor: 'rgba(45,212,191,0.6)', borderRadius: 4 }]
+        });
+      }
+
+      hide('shipping-loading'); show('shipping-content');
+    } catch (err) {
+      console.error('Shipping load error:', err);
+      document.getElementById('shipping-loading').innerHTML = '<div style="color:var(--red)">Failed to load shipping data</div>';
+    }
+  }
+
+  // ============================================================
+  // BREEDING
+  // ============================================================
+  async function loadBreeding() {
+    show('breeding-loading'); hide('breeding-content');
+    try {
+      const [eggs, prepupae, prediction] = await Promise.all([
+        api(`/breeding/eggs?start_date=${startDate}&end_date=${endDate}`),
+        api(`/breeding/prepupae?start_date=${startDate}&end_date=${endDate}`),
+        api(`/breeding/egg-prediction?start_date=${startDate}&end_date=${endDate}`),
+      ]);
+      if (!eggs) return;
+
+      const predSummary = prediction?.summary || {};
+      const accuracyColor = predSummary.accuracy ? (Math.abs(parseFloat(predSummary.variancePct)) < 15 ? '--green' : '--yellow') : '--text-3';
+      const varianceSign = predSummary.variance >= 0 ? '+' : '';
+
+      document.getElementById('breeding-stats').innerHTML = `
+        ${statCard('Total Eggs', n(eggs.summary.total_eggs,0), eggs.summary.total_collections+' collections', '--green')}
+        ${statCard('Egg Weight', n(eggs.summary.total_weight,1)+'g', 'avg '+n(eggs.summary.avg_weight,1)+'g/day', '--teal')}
+        ${statCard('Predicted Eggs', n(predSummary.totalPredicted||0,0), 'from model', '--purple')}
+        ${statCard('Model Accuracy', predSummary.accuracy?predSummary.accuracy+'%':'N/A', predSummary.variance!=null?varianceSign+n(predSummary.variance,0)+' variance':'', accuracyColor)}
+        ${statCard('Pre-Pupae Collected', n(prepupae.summary.total_collected,0), prepupae.summary.total_entries+' entries', '--amber')}
+        ${statCard('Mortality Rate', n(prepupae.summary.mortality_rate,1)+'%', n(prepupae.summary.total_dead,0)+' dead', parseFloat(prepupae.summary.mortality_rate)>10?'--red':'--green')}
+      `;
+
+      if (prediction?.timeline && prediction.timeline.length) {
+        const tl = prediction.timeline;
+        const actualPointColors = tl.map(d => {
+          if (d.actual > 0 && d.isInterpolated) return '#ef4444';
+          if (d.actual > 0 && d.isReal) return '#22c55e';
+          return 'transparent';
+        });
+        const actualPointRadii = tl.map(d => d.actual > 0 ? 5 : 0);
+        makeChart('chart-egg-prediction', 'line', {
+          labels: tl.map(d => shortDate(d.date)),
+          datasets: [
+            { label: 'Actual Eggs', data: tl.map(d => d.actual > 0 ? d.actual : null), borderColor: '#22c55e', fill: false, tension: 0.3, pointRadius: actualPointRadii, pointBackgroundColor: actualPointColors, pointBorderColor: actualPointColors, pointBorderWidth: 2, borderWidth: 2.5, spanGaps: true },
+            { label: 'Predicted Eggs', data: tl.map(d => d.predicted > 0 ? d.predicted : null), borderColor: '#818cf8', fill: false, borderDash: [6, 3], tension: 0.3, pointRadius: 3, pointBackgroundColor: '#818cf8', borderWidth: 2, spanGaps: true },
+          ]
+        }, { y: { beginAtZero: true, title: { display: true, text: 'Egg Count' } } });
+      }
+
+      if (eggs.daily && eggs.daily.length) {
+        makeChart('chart-eggs', 'bar', {
+          labels: eggs.daily.map(d => shortDate(d.date)),
+          datasets: [
+            { label: 'Eggs', data: eggs.daily.map(d => parseInt(d.total_eggs)), backgroundColor: 'rgba(34,197,94,0.6)', borderRadius: 4, yAxisID: 'y' },
+            { label: 'Weight (g)', data: eggs.daily.map(d => parseFloat(d.total_weight)), type: 'line', borderColor: '#2dd4bf', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3, yAxisID: 'y1' },
+          ]
+        }, { y: { position: 'left', title: { display: true, text: 'Egg Count' } }, y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Weight (g)' } } });
+      }
+
+      if (prepupae.daily && prepupae.daily.length) {
+        makeChart('chart-prepupae', 'bar', {
+          labels: prepupae.daily.map(d => shortDate(d.date)),
+          datasets: [
+            { label: 'Alive', data: prepupae.daily.map(d => parseInt(d.total_alive)), backgroundColor: 'rgba(234,179,8,0.6)', borderRadius: 4 },
+            { label: 'Dead', data: prepupae.daily.map(d => parseInt(d.total_dead)), backgroundColor: 'rgba(239,68,68,0.6)', borderRadius: 4 },
+          ]
+        }, { x: { stacked: true }, y: { stacked: true } });
+      }
+
+      if (prepupae.byShelf && prepupae.byShelf.length) {
+        makeChart('chart-shelf-mortality', 'bar', {
+          labels: prepupae.byShelf.map(s => 'S' + s.shelf_number),
+          datasets: [
+            { label: 'Collected', data: prepupae.byShelf.map(s => parseInt(s.total_collected)), backgroundColor: 'rgba(234,179,8,0.5)', borderRadius: 3 },
+            { label: 'Dead', data: prepupae.byShelf.map(s => parseInt(s.total_dead)), backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 3 },
+          ]
+        });
+      }
+
+      hide('breeding-loading'); show('breeding-content');
+    } catch (err) {
+      console.error('Breeding load error:', err);
+      document.getElementById('breeding-loading').innerHTML = '<div style="color:var(--red)">Failed to load breeding data</div>';
+    }
+  }
+
+  // ============================================================
+  // CHART HELPERS
+  // ============================================================
+  function makeChart(id, type, data, scaleOpts = {}, extraOpts = {}) {
+    if (charts[id]) charts[id].destroy();
+    const ctx = document.getElementById(id)?.getContext('2d');
+    if (!ctx) return;
+    const isDoughnut = type === 'doughnut';
+    charts[id] = new Chart(ctx, {
+      type, data,
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { intersect: false, mode: isDoughnut ? 'nearest' : 'index' },
+        plugins: {
+          legend: { display: true, position: isDoughnut ? 'right' : 'top' },
+          tooltip: { backgroundColor: '#0f1520', borderColor: '#1a2235', borderWidth: 1, titleColor: '#e2e8f0', bodyColor: '#94a3b8', padding: 10, cornerRadius: 6 },
         },
-      });
-    }
+        scales: isDoughnut ? {} : scaleOpts,
+        ...extraOpts,
+      },
+    });
+  }
 
-    // ============================================================
-    // UTILITY
-    // ============================================================
-    function statCard(label, value, sub, colorVar) {
-      return `<div class="stat-card">
-        <div class="stat-label">${label}</div>
-        <div class="stat-value" style="color:var(${colorVar})">${value}</div>
-        ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
-      </div>`;
-    }
+  // ============================================================
+  // UTILITY
+  // ============================================================
+  function kpiCard(label, value, sub, statusColor, accentColor) {
+    return `<div class="kpi">
+      <div class="kpi-top"><span class="kpi-label">${label}</span><span class="kpi-status" style="background:var(--${statusColor})"></span></div>
+      <div class="kpi-value" style="color:var(--${accentColor||statusColor})">${value}</div>
+      <div class="kpi-bottom"><span class="kpi-sub">${sub||''}</span></div>
+      <div class="kpi-accent" style="background:linear-gradient(90deg,var(--${accentColor||statusColor}),transparent)"></div>
+    </div>`;
+  }
 
-    function n(val, decimals = 2) {
-      const num = parseFloat(val) || 0;
-      if (decimals === 0) return Math.round(num).toLocaleString();
-      return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    }
+  function statCard(label, value, sub, colorVar) {
+    return `<div class="stat-card">
+      <div class="stat-label">${label}</div>
+      <div class="stat-value" style="color:var(${colorVar})">${value}</div>
+      ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
+    </div>`;
+  }
 
-    function shortDate(d) {
-      const parts = d.split('-');
-      return parseInt(parts[1]) + '/' + parseInt(parts[2]);
-    }
+  function n(val, decimals = 2) {
+    const num = parseFloat(val) || 0;
+    if (decimals === 0) return Math.round(num).toLocaleString();
+    return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
 
-    function channelLabel(ch) {
-      const labels = { retail: 'Website', wholesale: 'Wholesale', chewy: 'Chewy', 'amazon-pioneer': 'Amazon (Pioneer)', 'amazon-upnorth': 'Amazon (UP North)', ebay: 'eBay', tradeshow: 'Trade Show' };
-      return labels[ch] || ch;
-    }
+  function shortDate(d) { const p = d.split('-'); return parseInt(p[1]) + '/' + parseInt(p[2]); }
+  function channelLabel(ch) {
+    const labels = { retail: 'Website', wholesale: 'Wholesale', chewy: 'Chewy', 'amazon-pioneer': 'Amazon Pioneer', 'amazon-upnorth': 'Amazon UP North', ebay: 'eBay', tradeshow: 'Trade Show' };
+    return labels[ch] || ch;
+  }
+  function show(id) { document.getElementById(id).style.display = ''; }
+  function hide(id) { document.getElementById(id).style.display = 'none'; }
 
-    function show(id) { document.getElementById(id).style.display = ''; }
-    function hide(id) { document.getElementById(id).style.display = 'none'; }
-
-    // ============================================================
-    // INIT
-    // ============================================================
-    (function init() {
-      const btn = document.querySelector('.date-preset.active');
-      setPreset('7d', btn);
-    })();
-  </script>
+  (function init() {
+    setPreset('7d', document.querySelector('.date-preset.active'));
+  })();
+</script>
 </body>
 </html>
