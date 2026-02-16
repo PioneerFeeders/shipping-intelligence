@@ -536,7 +536,7 @@
       ]);
       if (!summary) return;
 
-      const custPaid = parseFloat(summary.total_customer_shipping || 0);
+      const custPaid = parseFloat(summary.total_shipping_paid || 0);
       const labelCost = parseFloat(summary.total_label_cost || 0);
 
       document.getElementById('shipping-stats').innerHTML = `
