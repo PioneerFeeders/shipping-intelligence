@@ -31,6 +31,11 @@ router.post('/auth', express.json(), (req, res) => {
   res.status(401).json({ error: 'Invalid password' });
 });
 
+router.post('/logout', (req, res) => {
+  res.clearCookie('dashboard_token');
+  res.json({ success: true });
+});
+
 router.use(requireAuth);
 
 // ============================================================
