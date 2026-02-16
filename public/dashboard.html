@@ -28,10 +28,27 @@
     .header-nav{display:flex;gap:4px}
     .nav-btn{padding:7px 14px;background:transparent;border:1px solid transparent;border-radius:7px;color:var(--text-2);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer}
     .nav-btn:hover{background:rgba(56,189,248,0.05)}.nav-btn.active{background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.2);color:var(--blue)}
-    .date-controls{display:flex;align-items:center;gap:10px}
-    .date-preset{padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text-2);font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer}
-    .date-preset.active{background:rgba(56,189,248,0.1);border-color:var(--blue);color:var(--blue)}
-    .date-input{background:var(--bg-card);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text-2);font-family:'JetBrains Mono',monospace;font-size:11px}
+    .date-controls{position:relative}
+    .date-btn{display:flex;align-items:center;gap:8px;padding:7px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;color:var(--text-2);font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;transition:all .2s}
+    .date-btn:hover,.date-btn.open{border-color:var(--blue);color:var(--blue)}
+    .date-btn svg{width:14px;height:14px;opacity:.6}
+    .date-btn.open svg{opacity:1}
+    .date-dd{position:absolute;top:calc(100% + 8px);right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;width:320px;box-shadow:0 20px 50px rgba(0,0,0,.5);z-index:200;display:none}
+    .date-dd.show{display:block}
+    .dd-label{font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px}
+    .dd-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+    .dd-preset{padding:6px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;text-align:center;transition:all .15s}
+    .dd-preset:hover{border-color:var(--border-light);background:var(--bg-hover)}
+    .dd-preset.active{background:rgba(56,189,248,0.1);border-color:var(--blue);color:var(--blue)}
+    .dd-divider{border:none;border-top:1px solid var(--border);margin:12px 0}
+    .dd-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    .dd-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px}
+    .dd-input:focus{outline:none;border-color:var(--blue)}
+    .dd-arrow{color:var(--text-3);font-size:14px}
+    .dd-apply{width:100%;padding:8px;background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);border-radius:6px;color:var(--blue);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+    .dd-apply:hover{background:rgba(56,189,248,0.25)}
+    .date-overlay{position:fixed;inset:0;z-index:199;display:none}
+    .date-overlay.show{display:block}
 
     .main{padding:20px 32px;max-width:1500px;margin:0 auto}
     .section{display:none}.section.active{display:block}
@@ -108,7 +125,7 @@
     @keyframes spin{to{transform:rotate(360deg)}}
 
     @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}.ch-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:768px){.main{padding:12px}.kpi-row,.ch-grid{grid-template-columns:1fr 1fr}.cg{grid-template-columns:1fr}.header{padding:12px 16px;flex-wrap:wrap;gap:12px}.date-controls{flex-wrap:wrap}}
+    @media(max-width:768px){.main{padding:12px}.kpi-row,.ch-grid{grid-template-columns:1fr 1fr}.cg{grid-template-columns:1fr}.header{padding:12px 16px;flex-wrap:wrap;gap:12px}.date-dd{right:-10px;width:calc(100vw - 32px);max-width:320px}}
   </style>
 </head>
 <body>
@@ -122,13 +139,34 @@
     </div>
   </div>
   <div class="date-controls">
-    <button class="date-preset active" onclick="setPreset('7d', this)">7D</button>
-    <button class="date-preset" onclick="setPreset('14d', this)">14D</button>
-    <button class="date-preset" onclick="setPreset('30d', this)">30D</button>
-    <button class="date-preset" onclick="setPreset('90d', this)">90D</button>
-    <input type="date" class="date-input" id="startDate">
-    <span style="color:var(--text-3)">→</span>
-    <input type="date" class="date-input" id="endDate">
+    <div class="date-overlay" id="dateOverlay" onclick="closeDatePicker()"></div>
+    <button class="date-btn" id="dateBtn" onclick="toggleDatePicker()">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 7h12M5 1v3M11 1v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span id="dateLabel">Last 7 days</span>
+      <svg viewBox="0 0 16 16" fill="none" style="width:10px;height:10px"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="date-dd" id="dateDd">
+      <div class="dd-label">Quick Select</div>
+      <div class="dd-presets">
+        <button class="dd-preset active" onclick="pickPreset('7d', this)">7 Days</button>
+        <button class="dd-preset" onclick="pickPreset('14d', this)">14 Days</button>
+        <button class="dd-preset" onclick="pickPreset('30d', this)">30 Days</button>
+        <button class="dd-preset" onclick="pickPreset('90d', this)">90 Days</button>
+      </div>
+      <div class="dd-presets" style="grid-template-columns:repeat(3,1fr)">
+        <button class="dd-preset" onclick="pickPreset('thisWeek', this)">This Week</button>
+        <button class="dd-preset" onclick="pickPreset('thisMonth', this)">This Month</button>
+        <button class="dd-preset" onclick="pickPreset('lastMonth', this)">Last Month</button>
+      </div>
+      <hr class="dd-divider">
+      <div class="dd-label">Custom Range</div>
+      <div class="dd-row">
+        <input type="date" class="dd-input" id="ddStart">
+        <span class="dd-arrow">→</span>
+        <input type="date" class="dd-input" id="ddEnd">
+      </div>
+      <button class="dd-apply" onclick="applyCustomRange()">Apply Range</button>
+    </div>
   </div>
 </div>
 
@@ -259,15 +297,81 @@
     const end = new Date(); let start = new Date();
     start.setDate(end.getDate() - parseInt(preset) + 1);
     startDate = fmt(start); endDate = fmt(end);
-    document.getElementById('startDate').value = startDate;
-    document.getElementById('endDate').value = endDate;
-    document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active'));
-    if (el) el.classList.add('active');
     refreshData();
   }
   function fmt(d) { return d.toISOString().split('T')[0]; }
-  document.getElementById('startDate').addEventListener('change', () => { startDate = document.getElementById('startDate').value; document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active')); refreshData(); });
-  document.getElementById('endDate').addEventListener('change', () => { endDate = document.getElementById('endDate').value; document.querySelectorAll('.date-preset').forEach(b => b.classList.remove('active')); refreshData(); });
+
+  // Date picker dropdown
+  function toggleDatePicker() {
+    const dd = document.getElementById('dateDd');
+    const ov = document.getElementById('dateOverlay');
+    const btn = document.getElementById('dateBtn');
+    const isOpen = dd.classList.contains('show');
+    dd.classList.toggle('show');
+    ov.classList.toggle('show');
+    btn.classList.toggle('open');
+    if (!isOpen) {
+      document.getElementById('ddStart').value = startDate;
+      document.getElementById('ddEnd').value = endDate;
+    }
+  }
+  function closeDatePicker() {
+    document.getElementById('dateDd').classList.remove('show');
+    document.getElementById('dateOverlay').classList.remove('show');
+    document.getElementById('dateBtn').classList.remove('open');
+  }
+
+  function updateDateLabel(text) {
+    document.getElementById('dateLabel').textContent = text;
+  }
+
+  function pickPreset(key, el) {
+    const end = new Date(); let start = new Date();
+    let label = '';
+    document.querySelectorAll('.dd-preset').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+
+    if (key === '7d') { start.setDate(end.getDate() - 6); label = 'Last 7 days'; }
+    else if (key === '14d') { start.setDate(end.getDate() - 13); label = 'Last 14 days'; }
+    else if (key === '30d') { start.setDate(end.getDate() - 29); label = 'Last 30 days'; }
+    else if (key === '90d') { start.setDate(end.getDate() - 89); label = 'Last 90 days'; }
+    else if (key === 'thisWeek') {
+      const day = end.getDay(); const diff = day === 0 ? 6 : day - 1;
+      start = new Date(end); start.setDate(end.getDate() - diff);
+      label = 'This week';
+    }
+    else if (key === 'thisMonth') {
+      start = new Date(end.getFullYear(), end.getMonth(), 1);
+      label = 'This month';
+    }
+    else if (key === 'lastMonth') {
+      start = new Date(end.getFullYear(), end.getMonth() - 1, 1);
+      const lmEnd = new Date(end.getFullYear(), end.getMonth(), 0);
+      startDate = fmt(start); endDate = fmt(lmEnd);
+      updateDateLabel('Last month');
+      closeDatePicker();
+      refreshData();
+      return;
+    }
+
+    startDate = fmt(start); endDate = fmt(end);
+    updateDateLabel(label);
+    closeDatePicker();
+    refreshData();
+  }
+
+  function applyCustomRange() {
+    const s = document.getElementById('ddStart').value;
+    const e = document.getElementById('ddEnd').value;
+    if (!s || !e) return;
+    startDate = s; endDate = e;
+    document.querySelectorAll('.dd-preset').forEach(b => b.classList.remove('active'));
+    const sShort = new Date(s+'T12:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric'});
+    const eShort = new Date(e+'T12:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric'});
+    updateDateLabel(sShort + ' – ' + eShort);
+    closeDatePicker();
+    refreshData();
+  }
 
   function showSection(name, el) {
     currentSection = name;
@@ -614,7 +718,7 @@
   function hide(id) { document.getElementById(id).style.display = 'none'; }
 
   (function init() {
-    setPreset('7d', document.querySelector('.date-preset.active'));
+    pickPreset('7d', document.querySelector('.dd-preset'));
   })();
 </script>
 </body>
