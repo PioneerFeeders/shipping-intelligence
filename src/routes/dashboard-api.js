@@ -180,7 +180,7 @@ router.get('/sales/summary', async (req, res) => {
     const orders = await fetchShopifyOrders(start_date, end_date);
 
     // Process tag-based analytics
-    const analytics = processOrderAnalytics(orders);
+    const analytics = await processOrderAnalytics(orders);
     res.json(analytics);
   } catch (err) {
     logger.error({ err }, 'Dashboard: sales summary error');
@@ -196,7 +196,7 @@ router.get('/sales/daily', async (req, res) => {
     }
 
     const orders = await fetchShopifyOrders(start_date, end_date);
-    const daily = processDailySales(orders);
+    const daily = await processDailySales(orders);
     res.json(daily);
   } catch (err) {
     logger.error({ err }, 'Dashboard: sales daily error');
