@@ -300,7 +300,10 @@
         api(`/sales/summary?start_date=${startDate}&end_date=${endDate}`),
         api(`/sales/daily?start_date=${startDate}&end_date=${endDate}`),
       ]);
-      if (!summary) return;
+      if (!summary || !summary.totalOrders) {
+        document.getElementById('sales-loading').innerHTML = '<div style="color:var(--text-3)">No sales data for this date range</div>';
+        return;
+      }
 
       const retailRev = summary.byTier['tier-retail']?.revenue || 0;
       const wholesaleRev = summary.byTier['tier-wholesale']?.revenue || 0;
