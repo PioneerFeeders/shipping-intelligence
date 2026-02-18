@@ -552,9 +552,181 @@ router.post('/migrate', async (req, res) => {
     await neonDb.query(`CREATE INDEX IF NOT EXISTS idx_shopify_week ON demand_shopify_weekly(week_start)`);
     await neonDb.query(`CREATE INDEX IF NOT EXISTS idx_pour_date ON cup_pouring_log(pour_date)`);
 
+    // Forecast accuracy snapshot table
+    await neonDb.query(`
+      CREATE TABLE IF NOT EXISTS forecast_weekly_snapshot (
+        id SERIAL PRIMARY KEY,
+        week_start DATE NOT NULL,
+        forecasted_demand INTEGER NOT NULL DEFAULT 0,
+        chewy_demand INTEGER NOT NULL DEFAULT 0,
+        amazon_demand INTEGER NOT NULL DEFAULT 0,
+        shopify_demand INTEGER NOT NULL DEFAULT 0,
+        pour_recommended INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(week_start)
+      )
+    `);
+    await neonDb.query(`CREATE INDEX IF NOT EXISTS idx_snapshot_week ON forecast_weekly_snapshot(week_start)`);
+
     res.json({ success: true, message: 'All forecast tables created' });
   } catch (err) {
     logger.error({ err }, 'Migration error');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// FORECAST ACCURACY
+// Compares past weekly forecasts vs actual sales
+// ============================================================
+router.get('/accuracy', async (req, res) => {
+  try {
+    const weeks = parseInt(req.query.weeks) || 12;
+
+    // Get past weekly snapshots (forecasted demand)
+    const snapshots = await neonDb.query(`
+      SELECT week_start, forecasted_demand, chewy_demand, amazon_demand, shopify_demand,
+             pour_recommended, created_at
+      FROM forecast_weekly_snapshot
+      ORDER BY week_start DESC
+      LIMIT $1
+    `, [weeks]);
+
+    // Get actual Shopify sales by week
+    const shopifyActual = await neonDb.query(`
+      SELECT week_start, hornworm_cups, total_orders, revenue
+      FROM demand_shopify_weekly
+      WHERE week_start >= NOW() - INTERVAL '${weeks} weeks'
+      ORDER BY week_start DESC
+    `);
+
+    // Get actual pours by week (group pour_date into weeks)
+    const poursActual = await neonDb.query(`
+      SELECT date_trunc('week', pour_date)::date as week_start,
+             SUM(sellable_cups) as sellable_cups,
+             SUM(cups_24ct + cups_12ct) as total_poured
+      FROM cup_pouring_log
+      WHERE pour_date >= NOW() - INTERVAL '${weeks} weeks'
+      GROUP BY date_trunc('week', pour_date)
+      ORDER BY week_start DESC
+    `);
+
+    // Build lookup maps
+    const shopifyMap = {};
+    for (const r of shopifyActual.rows) {
+      shopifyMap[r.week_start.toISOString().split('T')[0]] = r;
+    }
+    const pourMap = {};
+    for (const r of poursActual.rows) {
+      pourMap[r.week_start.toISOString().split('T')[0]] = r;
+    }
+
+    // Merge: for each snapshot week, attach actuals
+    const accuracy = snapshots.rows.map(snap => {
+      const wk = snap.week_start.toISOString().split('T')[0];
+      const shopify = shopifyMap[wk] || {};
+      const pour = pourMap[wk] || {};
+
+      const actualShopifyCups = parseInt(shopify.hornworm_cups || 0);
+      const actualPoured = parseInt(pour.total_poured || 0);
+      const actualSellable = parseInt(pour.sellable_cups || 0);
+      const forecastedDemand = parseInt(snap.forecasted_demand || 0);
+
+      // Actual total demand = Shopify actual (we don't have real-time Chewy/Amazon actuals yet,
+      // so we use the Shopify actual + the forecasted Chewy/Amazon as a proxy)
+      const actualTotalEstimate = actualShopifyCups + parseInt(snap.chewy_demand || 0) + parseInt(snap.amazon_demand || 0);
+
+      const variance = forecastedDemand > 0
+        ? Math.round(((actualTotalEstimate - forecastedDemand) / forecastedDemand) * 100)
+        : 0;
+
+      return {
+        weekStart: wk,
+        forecast: {
+          totalDemand: forecastedDemand,
+          chewy: parseInt(snap.chewy_demand || 0),
+          amazon: parseInt(snap.amazon_demand || 0),
+          shopify: parseInt(snap.shopify_demand || 0),
+          pourRecommended: parseInt(snap.pour_recommended || 0),
+        },
+        actual: {
+          shopifyCups: actualShopifyCups,
+          shopifyOrders: parseInt(shopify.total_orders || 0),
+          shopifyRevenue: parseFloat(shopify.revenue || 0),
+          cupsPoured: actualPoured,
+          sellableCups: actualSellable,
+        },
+        variance: {
+          shopifyVsForecast: actualShopifyCups - parseInt(snap.shopify_demand || 0),
+          pouredVsRecommended: actualPoured - parseInt(snap.pour_recommended || 0),
+          overallPct: variance,
+        },
+      };
+    });
+
+    res.json({ accuracy, weeksReturned: accuracy.length });
+  } catch (err) {
+    // If table doesn't exist yet, return empty
+    if (err.message?.includes('does not exist')) {
+      return res.json({ accuracy: [], weeksReturned: 0, note: 'Run migration to create snapshot table' });
+    }
+    logger.error({ err }, 'Forecast accuracy error');
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// SNAPSHOT WEEKLY FORECAST
+// Called by n8n daily — saves current forecast for future comparison
+// Idempotent: one snapshot per week (Monday)
+// ============================================================
+router.post('/snapshot', express.json(), async (req, res) => {
+  try {
+    const now = new Date();
+    // Get Monday of current week
+    const day = now.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - diff);
+    const weekStart = monday.toISOString().split('T')[0];
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+
+    // Calculate current forecast (same logic as pour-planner)
+    const chewy = await neonDb.query(`
+      SELECT SUM(physical_cups) as cups FROM demand_chewy_forecast
+      WHERE forecast_month >= $1 AND forecast_month < $1::date + INTERVAL '1 month'
+    `, [currentMonth]);
+
+    const amazon = await neonDb.query(`
+      SELECT AVG(units_sold) as avg FROM demand_amazon_monthly WHERE units_sold > 0
+    `);
+
+    const shopify = await neonDb.query(`
+      SELECT AVG(hornworm_cups) as avg
+      FROM (SELECT hornworm_cups FROM demand_shopify_weekly WHERE hornworm_cups > 0 ORDER BY week_start DESC LIMIT 12) s
+    `);
+
+    const chewyWeekly = Math.round(parseInt(chewy.rows[0]?.cups || 0) / 4.33);
+    const amazonWeekly = Math.round(parseFloat(amazon.rows[0]?.avg || 0) / 4.33);
+    const shopifyWeekly = Math.round(parseFloat(shopify.rows[0]?.avg || 0));
+    const totalDemand = chewyWeekly + amazonWeekly + shopifyWeekly;
+    const pourRecommended = Math.round(totalDemand * (1 + SAFETY_BUFFER)) + SHRINKAGE_PER_POUR;
+
+    await neonDb.query(`
+      INSERT INTO forecast_weekly_snapshot
+        (week_start, forecasted_demand, chewy_demand, amazon_demand, shopify_demand, pour_recommended)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (week_start)
+      DO UPDATE SET forecasted_demand = $2, chewy_demand = $3, amazon_demand = $4,
+                    shopify_demand = $5, pour_recommended = $6, created_at = NOW()
+    `, [weekStart, totalDemand, chewyWeekly, amazonWeekly, shopifyWeekly, pourRecommended]);
+
+    res.json({
+      success: true,
+      snapshot: { weekStart, totalDemand, chewyWeekly, amazonWeekly, shopifyWeekly, pourRecommended }
+    });
+  } catch (err) {
+    logger.error({ err }, 'Forecast snapshot error');
     res.status(500).json({ error: err.message });
   }
 });
