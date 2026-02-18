@@ -412,6 +412,20 @@
         </div>
       </div>
 
+      <div class="sec">
+        <span class="sec-dot" style="background:var(--red)"></span>
+        <span class="sec-label">Forecast Accuracy</span>
+        <span class="sec-line"></span>
+        <span class="sec-note">Forecasted demand vs actual sales · updated nightly</span>
+      </div>
+      <div id="forecast-accuracy" style="overflow-x:auto"></div>
+      <div class="cg" style="margin-top:16px">
+        <div class="cc full">
+          <div class="ct">Forecast vs Actual (Weekly)</div>
+          <div class="cw-tall"><canvas id="chart-accuracy"></canvas></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -928,6 +942,91 @@
           y: { position: 'left', beginAtZero: true, title: { display: true, text: 'Units' } },
           y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Revenue ($)' } },
         });
+      }
+
+      // Forecast Accuracy table + chart
+      try {
+        const acc = await api('/forecast/accuracy?weeks=12');
+        if (acc?.accuracy && acc.accuracy.length > 0) {
+          const rows = acc.accuracy.sort((a,b) => a.weekStart > b.weekStart ? 1 : -1);
+          let tableHtml = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="border-bottom:2px solid var(--border);text-align:left">
+              <th style="padding:8px 6px">Week</th>
+              <th style="padding:8px 6px;color:var(--chewy)">Chewy</th>
+              <th style="padding:8px 6px;color:var(--amazon)">Amazon</th>
+              <th style="padding:8px 6px;color:var(--shopify)">Shopify<br><span style="font-weight:400;font-size:11px">Fcst → Actual</span></th>
+              <th style="padding:8px 6px">Total Fcst</th>
+              <th style="padding:8px 6px">Pour Rec</th>
+              <th style="padding:8px 6px">Actually Poured</th>
+              <th style="padding:8px 6px">Variance</th>
+            </tr></thead><tbody>`;
+          for (const r of rows) {
+            const wkLabel = new Date(r.weekStart+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+            const shopFcst = r.forecast.shopify;
+            const shopActual = r.actual.shopifyCups;
+            const shopDiff = r.variance.shopifyVsForecast;
+            const shopColor = shopDiff >= 0 ? 'var(--green)' : 'var(--red)';
+            const pourDiff = r.variance.pouredVsRecommended;
+            const pourColor = pourDiff >= 0 ? 'var(--green)' : 'var(--red)';
+            const pctColor = Math.abs(r.variance.overallPct) <= 15 ? 'var(--green)' : Math.abs(r.variance.overallPct) <= 30 ? 'var(--orange)' : 'var(--red)';
+            tableHtml += `<tr style="border-bottom:1px solid var(--border)">
+              <td style="padding:6px">${wkLabel}</td>
+              <td style="padding:6px">${n(r.forecast.chewy,0)}</td>
+              <td style="padding:6px">${n(r.forecast.amazon,0)}</td>
+              <td style="padding:6px">${n(shopFcst,0)} → <b>${n(shopActual,0)}</b> <span style="color:${shopColor};font-size:11px">${shopDiff>=0?'+':''}${shopDiff}</span></td>
+              <td style="padding:6px"><b>${n(r.forecast.totalDemand,0)}</b></td>
+              <td style="padding:6px">${n(r.forecast.pourRecommended,0)}</td>
+              <td style="padding:6px">${r.actual.cupsPoured > 0 ? n(r.actual.cupsPoured,0) : '—'} ${r.actual.cupsPoured > 0 ? '<span style="color:'+pourColor+';font-size:11px">'+(pourDiff>=0?'+':'')+pourDiff+'</span>' : ''}</td>
+              <td style="padding:6px;color:${pctColor};font-weight:600">${r.variance.overallPct >= 0 ? '+' : ''}${r.variance.overallPct}%</td>
+            </tr>`;
+          }
+          tableHtml += '</tbody></table>';
+          document.getElementById('forecast-accuracy').innerHTML = tableHtml;
+
+          // Accuracy chart: forecast vs actual poured
+          makeChart('chart-accuracy', 'bar', {
+            labels: rows.map(r => {
+              const d = new Date(r.weekStart+'T12:00:00');
+              return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+            }),
+            datasets: [
+              {
+                label: 'Forecasted Demand',
+                data: rows.map(r => r.forecast.totalDemand),
+                backgroundColor: 'rgba(99,102,241,0.4)',
+                borderRadius: 4,
+              },
+              {
+                label: 'Pour Recommended',
+                data: rows.map(r => r.forecast.pourRecommended),
+                backgroundColor: 'rgba(251,146,60,0.4)',
+                borderRadius: 4,
+              },
+              {
+                label: 'Actually Poured',
+                data: rows.map(r => r.actual.cupsPoured || 0),
+                backgroundColor: 'rgba(34,197,94,0.5)',
+                borderRadius: 4,
+              },
+              {
+                label: 'Shopify Actual',
+                data: rows.map(r => r.actual.shopifyCups),
+                type: 'line',
+                borderColor: '#96bf48',
+                backgroundColor: 'transparent',
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: '#96bf48',
+                borderWidth: 2,
+              },
+            ]
+          }, { y: { beginAtZero: true, title: { display: true, text: 'Cups' } } });
+        } else {
+          document.getElementById('forecast-accuracy').innerHTML = '<div style="color:var(--text-3);padding:16px">No accuracy data yet. Snapshots are saved nightly — data will appear after the first week.</div>';
+        }
+      } catch (accErr) {
+        console.warn('Accuracy data not available:', accErr);
+        document.getElementById('forecast-accuracy').innerHTML = '<div style="color:var(--text-3);padding:16px">Accuracy tracking will start after migration and first nightly snapshot.</div>';
       }
 
       hide('forecast-loading'); show('forecast-content');
