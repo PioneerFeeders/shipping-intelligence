@@ -11,6 +11,7 @@ const invoiceRoutes = require('./routes/invoices');
 const apiRoutes = require('./routes/api');
 const dashboardRoutes = require('./routes/dashboard');
 const dashboardApiRoutes = require('./routes/dashboard-api');
+const forecastApiRoutes = require('./routes/forecast-api');
 
 const app = express();
 
@@ -34,6 +35,12 @@ app.use((req, res, next) => {
       if (opts.sameSite) cookie += `; SameSite=${opts.sameSite}`;
       cookie += '; Path=/';
       this.setHeader('Set-Cookie', cookie);
+      return this;
+    };
+  }
+  if (!res.clearCookie) {
+    res.clearCookie = function(name) {
+      this.setHeader('Set-Cookie', `${name}=; Max-Age=0; Path=/`);
       return this;
     };
   }
@@ -67,6 +74,7 @@ app.use('/webhooks', webhookRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/api', apiRoutes);
 app.use('/dashboard/api', dashboardApiRoutes);
+app.use('/dashboard/api/forecast', forecastApiRoutes);
 app.use('/dashboard', dashboardRoutes);
 
 // Manual trigger for tracking poll (useful for testing)
