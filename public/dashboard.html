@@ -22,7 +22,7 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-    .header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+    .header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);gap:12px;flex-wrap:wrap}
     .header-left{display:flex;align-items:center;gap:20px}
     .brand{font-size:12px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-3)}.brand b{color:var(--blue)}
     .header-nav{display:flex;gap:4px}
@@ -126,8 +126,79 @@
     .spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-right:12px}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    @media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}.ch-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:768px){.main{padding:12px}.kpi-row,.ch-grid{grid-template-columns:1fr 1fr}.cg{grid-template-columns:1fr}.header{padding:12px 16px;flex-wrap:wrap;gap:12px}.date-dd{right:-10px;width:calc(100vw - 32px);max-width:320px}}
+    /* Tablet */
+    @media(max-width:1100px){
+      .kpi-row{grid-template-columns:repeat(3,1fr)}
+      .ch-grid{grid-template-columns:repeat(2,1fr)}
+    }
+
+    /* Small tablet / large phone */
+    @media(max-width:768px){
+      .header{padding:10px 14px;flex-wrap:wrap;gap:8px}
+      .header-left{width:100%;justify-content:space-between}
+      .header-nav{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:2px;flex:1}
+      .header-nav::-webkit-scrollbar{display:none}
+      .nav-btn{padding:6px 10px;font-size:11px;white-space:nowrap;flex-shrink:0}
+      .date-controls{order:3}
+      .logout-btn{order:4;width:30px;height:30px}
+      .date-btn{padding:6px 10px;font-size:11px}
+      .date-dd{right:-10px;width:calc(100vw - 28px);max-width:340px}
+      .main{padding:10px 12px}
+      .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+      .kpi{padding:12px 14px}
+      .kpi-value{font-size:18px}
+      .kpi-label{font-size:9px;letter-spacing:.6px}
+      .kpi-sub{font-size:10px}
+      .ch-grid{grid-template-columns:1fr 1fr;gap:8px}
+      .ch{padding:12px}
+      .ch-val{font-size:13px}
+      .cg{grid-template-columns:1fr;gap:10px;margin-bottom:12px}
+      .cc{padding:14px}
+      .cw{height:200px}
+      .cw-tall{height:260px}
+      .sec{margin:18px 0 10px}
+      .sec-label{font-size:9px;letter-spacing:1.5px}
+      .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+      .stat-card{padding:12px}
+      .stat-value{font-size:18px}
+      .bar-l{width:100px;font-size:10px}
+      .bar-f{font-size:9px;padding-left:6px}
+    }
+
+    /* Phone */
+    @media(max-width:480px){
+      .header-left{gap:8px}
+      .brand{font-size:10px;letter-spacing:2px}
+      .header-left img{height:28px;width:28px}
+      .kpi-row{grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+      .kpi{padding:10px 12px;border-radius:8px}
+      .kpi-value{font-size:16px}
+      .kpi-top{margin-bottom:6px}
+      .kpi-label{font-size:8px}
+      .ch-grid{grid-template-columns:1fr;gap:8px}
+      .ch-name{font-size:12px}
+      .ch-name svg{max-width:44px;height:auto}
+      .pay{font-size:8px;padding:2px 5px}
+      .stats-grid{grid-template-columns:1fr 1fr;gap:6px}
+      .stat-card{padding:10px}
+      .stat-value{font-size:16px}
+      .stat-label{font-size:9px}
+      .cw{height:180px}
+      .cw-tall{height:220px}
+      .ct{font-size:11px}
+      .bar-l{width:80px;font-size:9px}
+      .dd-presets{grid-template-columns:repeat(4,1fr);gap:4px}
+      .dd-preset{padding:5px;font-size:10px}
+    }
+
+    /* Very small phone */
+    @media(max-width:360px){
+      .main{padding:8px}
+      .kpi-value{font-size:14px}
+      .kpi{padding:8px 10px}
+      .nav-btn{padding:5px 8px;font-size:10px}
+      .stat-value{font-size:14px}
+    }
   </style>
 </head>
 <body>
@@ -679,6 +750,7 @@
     if (charts[id]) charts[id].destroy();
     const ctx = document.getElementById(id)?.getContext('2d');
     if (!ctx) return;
+    const isMobile = window.innerWidth < 768;
     const isDoughnut = type === 'doughnut';
     charts[id] = new Chart(ctx, {
       type, data,
@@ -686,7 +758,7 @@
         responsive: true, maintainAspectRatio: false,
         interaction: { intersect: false, mode: isDoughnut ? 'nearest' : 'index' },
         plugins: {
-          legend: { display: true, position: isDoughnut ? 'right' : 'top' },
+          legend: { display: true, position: isDoughnut ? (isMobile ? 'bottom' : 'right') : 'top', labels: { boxWidth: isMobile ? 8 : 10, padding: isMobile ? 8 : 12, font: { size: isMobile ? 10 : 11 } } },
           tooltip: { backgroundColor: '#0f1520', borderColor: '#1a2235', borderWidth: 1, titleColor: '#e2e8f0', bodyColor: '#94a3b8', padding: 10, cornerRadius: 6 },
         },
         scales: isDoughnut ? {} : scaleOpts,
