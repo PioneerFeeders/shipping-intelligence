@@ -210,6 +210,7 @@
       <button class="nav-btn active" onclick="showSection('sales', this)">Sales</button>
       <button class="nav-btn" onclick="showSection('shipping', this)">Shipping</button>
       <button class="nav-btn" onclick="showSection('breeding', this)">Hornworm Breeding</button>
+      <button class="nav-btn" onclick="showSection('forecast', this)">Demand Forecast</button>
     </div>
   </div>
   <div class="date-controls">
@@ -356,6 +357,64 @@
     </div>
   </div>
 
+  <!-- ========== DEMAND FORECAST SECTION ========== -->
+  <div class="section" id="sec-forecast">
+    <div id="forecast-loading" class="loading"><div class="spinner"></div>Loading demand forecast...</div>
+    <div id="forecast-content" style="display:none">
+
+      <div id="forecast-kpis" class="kpi-row" style="grid-template-columns:repeat(4,1fr)"></div>
+
+      <div class="sec">
+        <span class="sec-dot" style="background:var(--orange)"></span>
+        <span class="sec-label">Weekly Pour Planner</span>
+        <span class="sec-line"></span>
+        <span class="sec-note">Next 4 Wednesdays · includes 10% safety + 76 cup shrinkage</span>
+      </div>
+      <div id="forecast-planner" class="stats-grid" style="grid-template-columns:repeat(4,1fr)"></div>
+
+      <div class="sec">
+        <span class="sec-dot" style="background:var(--teal)"></span>
+        <span class="sec-label">Monthly Demand by Channel</span>
+        <span class="sec-line"></span>
+      </div>
+      <div class="cg">
+        <div class="cc">
+          <div class="ct">Chewy Forecast (Physical Cups)</div>
+          <div class="cw"><canvas id="chart-chewy-forecast"></canvas></div>
+        </div>
+        <div class="cc">
+          <div class="ct">Channel Demand Split (This Month)</div>
+          <div class="cw"><canvas id="chart-demand-split"></canvas></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <span class="sec-dot" style="background:var(--green)"></span>
+        <span class="sec-label">Historical Supply vs Demand</span>
+        <span class="sec-line"></span>
+      </div>
+      <div class="cg">
+        <div class="cc full">
+          <div class="ct">Weekly Cups Poured (Sellable) vs Estimated Demand</div>
+          <div class="cw-tall"><canvas id="chart-pour-history"></canvas></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <span class="sec-dot" style="background:var(--purple)"></span>
+        <span class="sec-label">Amazon Sales Trend</span>
+        <span class="sec-line"></span>
+      </div>
+      <div class="cg">
+        <div class="cc full">
+          <div class="ct">Amazon Monthly Units & Revenue</div>
+          <div class="cw"><canvas id="chart-amazon-trend"></canvas></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -475,6 +534,7 @@
     if (currentSection === 'sales') loadSales();
     else if (currentSection === 'shipping') loadShipping();
     else if (currentSection === 'breeding') loadBreeding();
+    else if (currentSection === 'forecast') loadForecast();
   }
 
   // ============================================================
@@ -740,6 +800,140 @@
     } catch (err) {
       console.error('Breeding load error:', err);
       document.getElementById('breeding-loading').innerHTML = '<div style="color:var(--red)">Failed to load breeding data</div>';
+    }
+  }
+
+  // ============================================================
+  // DEMAND FORECAST
+  // ============================================================
+  async function loadForecast() {
+    show('forecast-loading'); hide('forecast-content');
+    try {
+      const [summary, planner, history, chewy] = await Promise.all([
+        api('/forecast/summary'),
+        api('/forecast/pour-planner'),
+        api('/forecast/history'),
+        api('/forecast/chewy'),
+      ]);
+      if (!summary) return;
+
+      // KPI cards
+      const pourColor = summary.pourRecommendation > 0 ? 'green' : 'text-3';
+      document.getElementById('forecast-kpis').innerHTML = `
+        ${kpiCard('Pour This Wed', n(summary.pourRecommendation, 0)+' cups', 'includes 10% buffer + 76 shrinkage', pourColor, 'orange')}
+        ${kpiCard('Weekly Demand', n(summary.weeklyDemand, 0)+' cups', 'all channels combined', 'green', 'green')}
+        ${kpiCard('Monthly Demand', n(summary.totalMonthlyDemand, 0)+' cups', 'Chewy '+n(summary.channels.chewy.monthly,0)+' · Amz '+n(summary.channels.amazon.monthly,0)+' · Shop '+n(summary.channels.shopify.monthly,0), 'green', 'blue')}
+        ${kpiCard('Recent Output', n(summary.recentPours.totalSellable, 0)+' cups', summary.recentPours.pourCount+' pours last 4 weeks', 'green', 'teal')}
+      `;
+
+      // Pour planner cards (next 4 Wednesdays)
+      if (planner?.wednesdays) {
+        document.getElementById('forecast-planner').innerHTML = planner.wednesdays.map((w, i) => {
+          const dateLabel = new Date(w.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const accent = i === 0 ? '--orange' : '--text-2';
+          return `<div class="stat-card" style="${i===0?'border:1px solid var(--orange);background:rgba(251,146,60,0.04)':''}">
+            <div class="stat-label" style="${i===0?'color:var(--orange)':''}">${dateLabel}</div>
+            <div class="stat-value" style="color:var(${accent})">${n(w.pourTarget,0)}</div>
+            <div class="stat-sub">
+              <span style="color:var(--chewy)">Chewy ${n(w.chewyDemand,0)}</span> ·
+              <span style="color:var(--amazon)">Amz ${n(w.amazonDemand,0)}</span> ·
+              <span style="color:var(--shopify)">Shop ${n(w.shopifyDemand,0)}</span>
+              <br>+${n(w.safetyBuffer,0)} safety +${w.shrinkage} shrink
+            </div>
+          </div>`;
+        }).join('');
+      }
+
+      // Chewy forecast bar chart
+      if (chewy?.monthly && chewy.monthly.length) {
+        makeChart('chart-chewy-forecast', 'bar', {
+          labels: chewy.monthly.map(m => {
+            const d = new Date(m.forecast_month);
+            return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+          }),
+          datasets: [{
+            label: 'Physical Cups',
+            data: chewy.monthly.map(m => parseInt(m.total_cups)),
+            backgroundColor: 'rgba(28,73,194,0.6)',
+            borderRadius: 4,
+          }]
+        }, { y: { beginAtZero: true, title: { display: true, text: 'Cups' } } });
+      }
+
+      // Channel demand doughnut
+      const ch = summary.channels;
+      if (ch.chewy.monthly > 0 || ch.amazon.monthly > 0 || ch.shopify.monthly > 0) {
+        makeChart('chart-demand-split', 'doughnut', {
+          labels: ['Chewy', 'Amazon', 'Shopify'],
+          datasets: [{
+            data: [ch.chewy.monthly, ch.amazon.monthly, ch.shopify.monthly],
+            backgroundColor: ['rgba(28,73,194,0.7)', 'rgba(255,153,0,0.7)', 'rgba(150,191,72,0.7)'],
+            borderWidth: 0,
+          }]
+        }, {}, { cutout: '68%' });
+      }
+
+      // Pour history chart
+      if (history?.pours && history.pours.length) {
+        const pours = history.pours.sort((a,b) => a.pour_date > b.pour_date ? 1 : -1);
+        makeChart('chart-pour-history', 'bar', {
+          labels: pours.map(p => shortDate(p.pour_date.split('T')[0])),
+          datasets: [
+            {
+              label: 'Sellable Cups',
+              data: pours.map(p => parseInt(p.sellable_cups)),
+              backgroundColor: 'rgba(34,197,94,0.5)',
+              borderRadius: 4,
+            },
+            {
+              label: 'Shrinkage (76)',
+              data: pours.map(() => 76),
+              backgroundColor: 'rgba(239,68,68,0.25)',
+              borderRadius: 4,
+            },
+          ]
+        }, { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Cups' } } });
+      }
+
+      // Amazon trend chart
+      if (history?.amazon && history.amazon.length) {
+        const amz = history.amazon.sort((a,b) => a.sales_month > b.sales_month ? 1 : -1);
+        makeChart('chart-amazon-trend', 'bar', {
+          labels: amz.map(m => {
+            const d = new Date(m.sales_month);
+            return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+          }),
+          datasets: [
+            {
+              label: 'Units',
+              data: amz.map(m => parseInt(m.units_sold)),
+              backgroundColor: 'rgba(255,153,0,0.6)',
+              borderRadius: 4,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Revenue',
+              data: amz.map(m => parseFloat(m.revenue)),
+              type: 'line',
+              borderColor: '#fb923c',
+              backgroundColor: 'transparent',
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: '#fb923c',
+              yAxisID: 'y1',
+              borderWidth: 2,
+            },
+          ]
+        }, {
+          y: { position: 'left', beginAtZero: true, title: { display: true, text: 'Units' } },
+          y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Revenue ($)' } },
+        });
+      }
+
+      hide('forecast-loading'); show('forecast-content');
+    } catch (err) {
+      console.error('Forecast load error:', err);
+      document.getElementById('forecast-loading').innerHTML = '<div style="color:var(--red)">Failed to load forecast data. Run migration first: POST /dashboard/api/forecast/migrate</div>';
     }
   }
 
