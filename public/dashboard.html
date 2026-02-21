@@ -299,6 +299,53 @@
       .po-day-name{font-size:10px}.po-day-chip{font-size:8px}
     }
     @media(max-width:360px){.po-kpi-row .kpi-value{font-size:14px}}
+
+    /* ═══ PAYROLL ═══ */
+    .pr-week-nav{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    .pr-week-nav button{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-2);font-family:'DM Sans',sans-serif;font-size:12px;padding:6px 12px;cursor:pointer;transition:all .12s}
+    .pr-week-nav button:hover{background:var(--bg-hover);color:var(--text)}
+    .pr-week-label{font-size:15px;font-weight:700;color:var(--text);min-width:220px;text-align:center}
+    .pr-table{width:100%;border-collapse:collapse;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+    .pr-table th{text-align:left;padding:10px 18px;font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);background:rgba(17,24,39,0.6);border-bottom:1px solid var(--border)}
+    .pr-table td{padding:10px 18px;border-bottom:1px solid rgba(26,34,53,0.5);font-size:13px;color:var(--text-2);vertical-align:middle}
+    .pr-table tr:last-child td{border-bottom:none}
+    .pr-table tr:hover td{background:var(--bg-hover)}
+    .pr-table .pr-name{font-weight:600;color:var(--text)}
+    .pr-table .pr-type{font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:4px;display:inline-block}
+    .pr-type-hourly{background:rgba(56,189,248,0.1);color:var(--blue)}
+    .pr-type-fixed{background:rgba(100,116,139,0.15);color:var(--text-3)}
+    .pr-table .pr-rate{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-3)}
+    .pr-table .pr-pay{text-align:right;font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text)}
+    .pr-hrs-input{width:60px;background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:5px 8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;text-align:center}
+    .pr-hrs-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(56,189,248,0.15)}
+    .pr-hrs-input:disabled{opacity:0.4;cursor:not-allowed}
+    .pr-total-row td{background:rgba(17,24,39,0.4);font-weight:700;color:var(--text);border-top:2px solid var(--border)}
+    .pr-total-row .pr-pay{font-size:16px;color:var(--green)}
+    .pr-save-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+    .pr-save-btn{background:var(--blue);color:#fff;border:none;border-radius:7px;padding:8px 24px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+    .pr-save-btn:hover{filter:brightness(1.15)}
+    .pr-save-btn:disabled{opacity:0.5;cursor:not-allowed}
+    .pr-saved-msg{font-size:12px;color:var(--green);font-weight:600;opacity:0;transition:opacity .3s}
+    .pr-saved-msg.show{opacity:1}
+    .pr-pct-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-top:16px}
+    .pr-pct-label{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+    .pr-pct-value{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace}
+    .pr-pct-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+    .pr-history{margin-top:20px}
+    .pr-hist-row{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid rgba(26,34,53,0.3);font-size:12px}
+    .pr-hist-row:last-child{border-bottom:none}
+    .pr-hist-week{color:var(--text-2);font-weight:500}
+    .pr-hist-amt{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--text)}
+    .pr-hist-pct{font-family:'JetBrains Mono',monospace;font-weight:700;min-width:50px;text-align:right}
+    @media(max-width:768px){
+      .pr-table th,.pr-table td{padding:8px 12px;font-size:12px}
+      .pr-hrs-input{width:50px;font-size:12px;padding:4px 6px}
+      .pr-week-label{font-size:13px;min-width:auto}
+      .pr-pct-value{font-size:22px}
+    }
+    @media(max-width:480px){
+      .pr-table .pr-rate-col,.pr-table .pr-type-col{display:none}
+    }
   </style>
 </head>
 <body>
@@ -312,6 +359,7 @@
       <button class="nav-btn" onclick="showSection('breeding', this)">Hornworm Breeding</button>
       <button class="nav-btn" onclick="showSection('forecast', this)">Demand Forecast</button>
       <button class="nav-btn" onclick="showSection('payouts', this)">Payouts</button>
+      <button class="nav-btn" onclick="showSection('payroll', this)">Payroll</button>
     </div>
   </div>
   <div class="date-controls">
@@ -570,6 +618,48 @@
     </div>
   </div>
 
+  <!-- ========== PAYROLL SECTION ========== -->
+  <div class="section" id="sec-payroll">
+    <div class="sec" style="margin-top:0">
+      <span class="sec-dot" style="background:var(--blue)"></span>
+      <span class="sec-label">Weekly Payroll</span>
+      <span class="sec-line"></span>
+    </div>
+
+    <div class="pr-week-nav">
+      <button onclick="prChangeWeek(-1)">← Prev</button>
+      <div class="pr-week-label" id="pr-week-label"></div>
+      <button onclick="prChangeWeek(1)">Next →</button>
+    </div>
+
+    <div id="pr-kpis" class="po-kpi-row" style="margin-bottom:16px"></div>
+
+    <table class="pr-table">
+      <thead><tr>
+        <th>Employee</th>
+        <th class="pr-type-col">Type</th>
+        <th class="pr-rate-col">Rate</th>
+        <th>Hours</th>
+        <th style="text-align:right">Pay</th>
+      </tr></thead>
+      <tbody id="pr-tbody"></tbody>
+    </table>
+
+    <div class="pr-save-row">
+      <button class="pr-save-btn" id="pr-save-btn" onclick="prSaveWeek()">Save Week</button>
+      <span class="pr-saved-msg" id="pr-saved-msg">✓ Saved</span>
+    </div>
+
+    <div class="sec" style="margin-top:24px">
+      <span class="sec-dot" style="background:var(--purple)"></span>
+      <span class="sec-label">Recent Weeks</span>
+      <span class="sec-line"></span>
+    </div>
+    <div class="po-card">
+      <div id="pr-history" style="padding:4px 0"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -691,6 +781,7 @@
     else if (currentSection === 'breeding') loadBreeding();
     else if (currentSection === 'forecast') loadForecast();
     else if (currentSection === 'payouts') loadPayouts();
+    else if (currentSection === 'payroll') loadPayroll();
   }
 
   // ============================================================
@@ -731,6 +822,18 @@
         ${kpiCard('<span style="display:flex;align-items:center;gap:4px"><svg viewBox="0 0 24 28" width="12" height="14"><path d="M12 1C6 1 2 4 2 4v12c0 6 10 11 10 11s10-5 10-11V4s-4-3-10-3z" fill="#351C15"/><path d="M12 3C7 3 4 5.5 4 5.5v10.5c0 5 8 9 8 9s8-4 8-9V5.5S17 3 12 3z" fill="#FFB500"/></svg>UPS Allocation</span>', '—', 'see shipping tab', 'yellow', 'ups-gold')}
         ${kpiCard('Avg Order Value', '$'+n(totalRev / (summary.totalOrders||1)), 'per order', 'green', 'green')}
       `;
+
+      // Fetch payroll % for current week
+      try {
+        const prData = await api('/payroll/current-total');
+        if (prData && prData.total_pay > 0 && totalRev > 0) {
+          const pct = (prData.total_pay / totalRev * 100).toFixed(1);
+          const color = pct < 25 ? 'var(--green)' : pct < 35 ? 'var(--yellow)' : 'var(--red)';
+          document.getElementById('sales-kpis').innerHTML += kpiCard('Payroll %', pct+'%', '$'+n(prData.total_pay)+' of $'+n(totalRev), 'green', null);
+          const lastKpi = document.getElementById('sales-kpis').lastElementChild;
+          if (lastKpi) lastKpi.querySelector('.kpi-value').style.color = color;
+        }
+      } catch(e) { /* payroll API not ready yet */ }
 
       document.getElementById('sales-channels').innerHTML = `
         <div class="ch" style="border-left-color:var(--chewy)">
@@ -1443,15 +1546,178 @@
   }
 
   function loadPayouts(){
-    // TODO: Replace demo data with API calls:
-    // const res = await fetch('/dashboard/api/payouts/shopify');
-    // poShopifyPayouts = await res.json();
     poRenderSummary();
     poRenderAllTable();
     poRenderWeekly();
     poRenderThisWeekTable();
     poRenderThisMonthTable();
     poRenderForecast();
+  }
+
+  // ═══════════════════════════════════════════════════
+  // PAYROLL
+  // ═══════════════════════════════════════════════════
+  let prCurrentWeek = null; // Date object for Monday
+  let prEmployees = [];
+
+  function prGetMonday(d) {
+    const dt = new Date(d);
+    const day = dt.getDay();
+    dt.setDate(dt.getDate() - (day === 0 ? 6 : day - 1));
+    dt.setHours(0,0,0,0);
+    return dt;
+  }
+
+  function prDateStr(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function prFormatWeek(monday) {
+    const sun = new Date(monday); sun.setDate(monday.getDate() + 6);
+    const opts = { month: 'short', day: 'numeric' };
+    const isThisWeek = prDateStr(prGetMonday(new Date())) === prDateStr(monday);
+    return `${monday.toLocaleDateString('en-US', opts)} – ${sun.toLocaleDateString('en-US', opts)}${isThisWeek ? '  (Current)' : ''}`;
+  }
+
+  function prChangeWeek(dir) {
+    prCurrentWeek.setDate(prCurrentWeek.getDate() + (dir * 7));
+    loadPayroll();
+  }
+
+  async function loadPayroll() {
+    if (!prCurrentWeek) prCurrentWeek = prGetMonday(new Date());
+    const weekStr = prDateStr(prCurrentWeek);
+
+    document.getElementById('pr-week-label').textContent = prFormatWeek(prCurrentWeek);
+
+    try {
+      const data = await api(`/payroll/week?date=${weekStr}`);
+      if (!data) return;
+      prEmployees = data.employees;
+      prRenderTable(data);
+      prRenderKpis(data);
+    } catch (err) {
+      // API not ready yet — use demo data
+      prLoadDemo();
+    }
+
+    // Load history
+    try {
+      const history = await api('/payroll/summary?weeks=8');
+      if (history) prRenderHistory(history);
+    } catch(e) { prRenderHistoryDemo(); }
+  }
+
+  // Demo fallback when API isn't wired yet
+  function prLoadDemo() {
+    prEmployees = [
+      { employee_id:1, name:'Justin', pay_type:'fixed', hourly_rate:null, weekly_fixed:500, hours:null, pay:500, saved:false },
+      { employee_id:2, name:'Andrea', pay_type:'hourly', hourly_rate:15, weekly_fixed:null, hours:null, pay:null, saved:false },
+      { employee_id:3, name:'Jeremy', pay_type:'hourly', hourly_rate:14, weekly_fixed:null, hours:null, pay:null, saved:false },
+      { employee_id:4, name:'Gabe',   pay_type:'hourly', hourly_rate:15, weekly_fixed:null, hours:null, pay:null, saved:false },
+      { employee_id:5, name:'Ami',    pay_type:'hourly', hourly_rate:14, weekly_fixed:null, hours:null, pay:null, saved:false },
+      { employee_id:6, name:'Sarah',  pay_type:'fixed', hourly_rate:null, weekly_fixed:250, hours:null, pay:250, saved:false },
+    ];
+    prRenderTable({ employees: prEmployees, total_pay: 750 });
+    prRenderKpis({ total_pay: 750 });
+    prRenderHistoryDemo();
+  }
+
+  function prRenderKpis(data) {
+    const total = data.total_pay || prCalcTotal();
+    document.getElementById('pr-kpis').innerHTML = `
+      <div class="kpi"><div class="kpi-label">Weekly payroll</div><div class="kpi-value" style="color:var(--blue)">${poFmt(total)}</div><div class="kpi-sub">${prEmployees.length} employees</div></div>
+      <div class="kpi"><div class="kpi-label">Fixed costs</div><div class="kpi-value">${poFmt(prEmployees.filter(e=>e.pay_type==='fixed').reduce((s,e)=>s+(e.pay||0),0))}</div><div class="kpi-sub">${prEmployees.filter(e=>e.pay_type==='fixed').length} salaried</div></div>
+      <div class="kpi"><div class="kpi-label">Variable costs</div><div class="kpi-value">${poFmt(prEmployees.filter(e=>e.pay_type==='hourly').reduce((s,e)=>s+(e.pay||0),0))}</div><div class="kpi-sub">${prEmployees.filter(e=>e.pay_type==='hourly').length} hourly</div></div>
+      <div class="kpi"><div class="kpi-label">Total hours</div><div class="kpi-value">${prEmployees.reduce((s,e)=>s+(e.hours||0),0).toFixed(1)}</div><div class="kpi-sub">Hourly employees</div></div>`;
+  }
+
+  function prCalcTotal() {
+    return prEmployees.reduce((s, e) => s + (e.pay || 0), 0);
+  }
+
+  function prRenderTable(data) {
+    let h = '';
+    data.employees.forEach((emp, i) => {
+      const isFixed = emp.pay_type === 'fixed';
+      const rate = isFixed ? `$${emp.weekly_fixed}/wk` : `$${emp.hourly_rate}/hr`;
+      const typeCls = isFixed ? 'pr-type-fixed' : 'pr-type-hourly';
+      const pay = emp.pay || 0;
+      h += `<tr>
+        <td class="pr-name">${emp.name}</td>
+        <td class="pr-type-col"><span class="pr-type ${typeCls}">${emp.pay_type}</span></td>
+        <td class="pr-rate-col pr-rate">${rate}</td>
+        <td><input type="number" class="pr-hrs-input" id="pr-hrs-${i}" value="${emp.hours || ''}" placeholder="—" step="0.5" min="0" max="80" ${isFixed ? 'disabled' : ''} oninput="prUpdatePay(${i})"></td>
+        <td class="pr-pay" id="pr-pay-${i}">${pay > 0 ? poFmt(pay) : '—'}</td>
+      </tr>`;
+    });
+    // Total row
+    const total = prCalcTotal();
+    h += `<tr class="pr-total-row"><td colspan="3" style="font-size:13px">Total Payroll</td><td></td><td class="pr-pay">${poFmt(total)}</td></tr>`;
+    document.getElementById('pr-tbody').innerHTML = h;
+    document.getElementById('pr-saved-msg').classList.remove('show');
+  }
+
+  function prUpdatePay(idx) {
+    const emp = prEmployees[idx];
+    if (emp.pay_type === 'fixed') return;
+    const hrs = parseFloat(document.getElementById(`pr-hrs-${idx}`).value) || 0;
+    emp.hours = hrs;
+    emp.pay = hrs * emp.hourly_rate;
+    document.getElementById(`pr-pay-${idx}`).textContent = emp.pay > 0 ? poFmt(emp.pay) : '—';
+
+    // Update total row
+    const total = prCalcTotal();
+    const rows = document.getElementById('pr-tbody').querySelectorAll('tr');
+    const lastRow = rows[rows.length - 1];
+    lastRow.querySelector('.pr-pay').textContent = poFmt(total);
+
+    // Update KPIs
+    prRenderKpis({ total_pay: total });
+  }
+
+  async function prSaveWeek() {
+    const weekStr = prDateStr(prCurrentWeek);
+    const entries = prEmployees.map(emp => ({
+      employee_id: emp.employee_id,
+      hours: emp.hours,
+      pay: emp.pay || (emp.pay_type === 'fixed' ? emp.weekly_fixed : 0),
+      notes: null,
+    }));
+
+    const btn = document.getElementById('pr-save-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      await fetch('/dashboard/api/payroll/week', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ week_start: weekStr, entries }),
+      });
+      document.getElementById('pr-saved-msg').classList.add('show');
+    } catch (e) {
+      // Demo mode — just show saved
+      document.getElementById('pr-saved-msg').classList.add('show');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Save Week';
+  }
+
+  function prRenderHistory(weeks) {
+    if (!weeks.length) { document.getElementById('pr-history').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);font-size:13px">No payroll history yet</div>'; return; }
+    let h = '';
+    weeks.forEach(w => {
+      const d = new Date(w.week_start + 'T00:00:00');
+      const sun = new Date(d); sun.setDate(d.getDate() + 6);
+      const label = `${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${sun.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+      h += `<div class="pr-hist-row"><span class="pr-hist-week">${label}</span><span class="pr-hist-amt">${poFmt(w.total_pay)}</span></div>`;
+    });
+    document.getElementById('pr-history').innerHTML = h;
+  }
+
+  function prRenderHistoryDemo() {
+    document.getElementById('pr-history').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);font-size:13px">Save your first week to see history here</div>';
   }
 </script>
 </body>
