@@ -18,6 +18,13 @@
       --chewy:#1C49C2;--amazon:#FF9900;--shopify:#96bf48;
       --ebay-blue:#0064D2;--ebay-red:#e53238;--ebay-yellow:#f5af02;--ebay-green:#86b817;
       --ups-brown:#351C15;--ups-gold:#FFB500;
+      --po-green:#22c55e;--po-green-dim:rgba(34,197,94,0.1);
+      --po-purple:#a78bfa;--po-purple-dim:rgba(167,139,250,0.1);--po-purple-b:rgba(167,139,250,0.25);
+      --po-yellow:#eab308;--po-yellow-dim:rgba(234,179,8,0.1);--po-yellow-b:rgba(234,179,8,0.25);
+      --po-gray:#64748b;--po-gray-dim:rgba(100,116,139,0.1);
+      --po-chewy:#6d8fff;--po-chewy-dim:rgba(109,143,255,0.12);
+      --po-shopify:#96bf48;--po-shopify-dim:rgba(150,191,72,0.12);
+      --po-link:#38bdf8;
     }
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
@@ -199,6 +206,99 @@
       .nav-btn{padding:5px 8px;font-size:10px}
       .stat-value{font-size:14px}
     }
+    /* ═══ PAYOUTS ═══ */
+    .po-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+    .po-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}
+    .po-card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+    .po-card-title{font-size:14px;font-weight:700;color:var(--text)}
+    .po-tabs{display:flex;gap:4px;padding:10px 18px;border-bottom:1px solid var(--border)}
+    .po-tab{padding:5px 12px;background:transparent;border:1px solid transparent;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;transition:all .12s}
+    .po-tab:hover{background:var(--bg-hover)}
+    .po-tab.active{background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.2);color:var(--blue);font-weight:600}
+    .po-table{width:100%;border-collapse:collapse}
+    .po-table th{text-align:left;padding:8px 18px;font-size:9px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);background:rgba(17,24,39,0.6);border-bottom:1px solid var(--border)}
+    .po-table th:last-child{text-align:right}
+    .po-table td{padding:10px 18px;border-bottom:1px solid rgba(26,34,53,0.5);font-size:13px;color:var(--text-2);vertical-align:middle}
+    .po-table tr:last-child td{border-bottom:none}
+    .po-table tr:hover td{background:var(--bg-hover)}
+    .po-table .po-date{color:var(--po-link);font-weight:500}
+    .po-table .po-amt{text-align:right;font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12px;font-variant-numeric:tabular-nums}
+    .po-table .po-amt .cur{color:var(--text-3);font-weight:400;font-size:10px;margin-left:2px}
+    .po-table .po-amt.neg{color:var(--red)}
+    .po-table .po-amt.est{color:var(--po-purple)}
+    .po-st{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+    .po-st-dep{background:var(--po-green-dim);color:var(--po-green);border:1px solid rgba(34,197,94,0.25)}
+    .po-st-sch{background:var(--po-yellow-dim);color:var(--po-yellow);border:1px solid var(--po-yellow-b)}
+    .po-st-est{background:var(--po-purple-dim);color:var(--po-purple);border:1px solid var(--po-purple-b)}
+    .po-st-wd{background:var(--po-gray-dim);color:var(--po-gray);border:1px solid rgba(100,116,139,0.25)}
+    .po-ch{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+    .po-ch-chewy{background:var(--po-chewy-dim);color:var(--po-chewy)}
+    .po-ch-shopify{background:var(--po-shopify-dim);color:var(--po-shopify)}
+    .po-view{display:none}.po-view.active{display:block}
+    .po-week-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}
+    .po-wk{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+    .po-wk.current{border-color:var(--blue);border-width:2px;background:rgba(56,189,248,0.04)}
+    .po-wk-label{font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:2px;display:flex;align-items:center;gap:6px}
+    .po-wk-label .now-badge{font-size:9px;background:var(--blue);color:#fff;padding:1px 6px;border-radius:10px;font-weight:700}
+    .po-wk-range{font-size:10px;color:var(--text-3);margin-bottom:8px}
+    .po-wk-total{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);line-height:1;margin-bottom:10px}
+    .po-wk-split{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+    .po-wk-split-item{display:flex;align-items:center;gap:4px}
+    .po-wk-split-dot{width:7px;height:7px;border-radius:2px}
+    .po-wk-split-lbl{font-size:10px;color:var(--text-3)}
+    .po-wk-split-val{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+    .po-bar-track{height:7px;background:var(--border);border-radius:4px;overflow:hidden;position:relative;margin-bottom:4px}
+    .po-bar-conf{height:100%;position:absolute;left:0;top:0;border-radius:4px;background:var(--po-green);transition:width .4s}
+    .po-bar-est{height:100%;position:absolute;top:0;border-radius:4px;background:var(--po-purple);opacity:0.4;transition:all .4s}
+    .po-bar-wtd{position:absolute;top:-3px;bottom:-3px;width:2.5px;background:var(--blue);border-radius:1px;z-index:2}
+    .po-bar-note{font-size:10px;color:var(--text-3);text-align:right}.po-bar-note b{color:var(--blue)}
+    .po-channels{display:flex;gap:12px;margin-top:8px}
+    .po-ch-bar{flex:1}
+    .po-ch-bar-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+    .po-ch-bar-amt{font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace}
+    .po-ch-bar-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+    .po-ch-bar-fill{height:100%;border-radius:2px}
+    .po-days{border-top:1px solid var(--border);margin-top:10px;padding-top:6px}
+    .po-day-hdr{display:grid;grid-template-columns:55px 1fr 65px 65px 75px;padding:3px 0;border-bottom:1px solid var(--border);margin-bottom:2px}
+    .po-day-hdr span{font-size:9px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.3px}
+    .po-day-hdr span:nth-child(n+3){text-align:right}
+    .po-day{display:grid;grid-template-columns:55px 1fr 65px 65px 75px;align-items:center;padding:4px 0;border-bottom:1px solid rgba(26,34,53,.3);font-size:12px}
+    .po-day:last-child{border-bottom:none}
+    .po-day.today{background:rgba(56,189,248,0.06);margin:0 -16px;padding:4px 16px;border-radius:4px}
+    .po-day-name{font-weight:600;color:var(--text-2);font-size:11px}
+    .po-day-name .td-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--blue);margin-right:3px;vertical-align:middle}
+    .po-day-chips{display:flex;flex-wrap:wrap;gap:3px}
+    .po-day-chip{font-size:9px;font-weight:600;padding:1px 5px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+    .po-day-chip.chewy{background:var(--po-chewy-dim);color:var(--po-chewy)}
+    .po-day-chip.shopify{background:var(--po-shopify-dim);color:var(--po-shopify)}
+    .po-day-val{text-align:right;font-size:11px;font-weight:500;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;color:var(--text-2)}
+    .po-day-val.conf{color:var(--po-green)}.po-day-val.estv{color:var(--po-purple)}.po-day-val.totv{color:var(--text);font-weight:700}
+    .po-fc-hdr{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--border)}
+    .po-fc-sub{font-size:11px;color:var(--text-3);padding:8px 18px;border-bottom:1px solid var(--border);background:rgba(17,24,39,0.4)}
+    @media(max-width:1100px){.po-kpi-row{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:768px){
+      .po-kpi-row{grid-template-columns:1fr 1fr;gap:8px}
+      .po-week-grid{grid-template-columns:1fr;gap:10px;padding:12px}
+      .po-wk{padding:12px}.po-wk-total{font-size:18px}
+      .po-table th,.po-table td{padding:8px 12px;font-size:12px}
+      .po-table .po-desc-col{display:none}
+      .po-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:2px;padding:8px 12px}
+      .po-tabs::-webkit-scrollbar{display:none}
+      .po-tab{white-space:nowrap;flex-shrink:0;font-size:11px;padding:5px 10px}
+      .po-card-header{padding:12px}
+      .po-day{grid-template-columns:44px 1fr 60px}
+      .po-day-hdr{grid-template-columns:44px 1fr 60px}
+      .po-day-val.conf,.po-day-val.estv,.po-day-hdr span:nth-child(3),.po-day-hdr span:nth-child(4){display:none}
+      .po-fc-hdr{padding:10px 12px}.po-fc-sub{padding:6px 12px;font-size:10px}
+    }
+    @media(max-width:480px){
+      .po-kpi-row{grid-template-columns:1fr 1fr;gap:6px}
+      .po-kpi-row .kpi{padding:10px 12px}
+      .po-kpi-row .kpi-value{font-size:16px}
+      .po-wk-total{font-size:16px}
+      .po-day-name{font-size:10px}.po-day-chip{font-size:8px}
+    }
+    @media(max-width:360px){.po-kpi-row .kpi-value{font-size:14px}}
   </style>
 </head>
 <body>
@@ -211,6 +311,7 @@
       <button class="nav-btn" onclick="showSection('shipping', this)">Shipping</button>
       <button class="nav-btn" onclick="showSection('breeding', this)">Hornworm Breeding</button>
       <button class="nav-btn" onclick="showSection('forecast', this)">Demand Forecast</button>
+      <button class="nav-btn" onclick="showSection('payouts', this)">Payouts</button>
     </div>
   </div>
   <div class="date-controls">
@@ -429,6 +530,46 @@
     </div>
   </div>
 
+  <!-- ========== PAYOUTS SECTION ========== -->
+  <div class="section" id="sec-payouts">
+    <div class="sec" style="margin-top:0">
+      <span class="sec-dot" style="background:var(--po-green)"></span>
+      <span class="sec-label">Payouts & Cash Flow</span>
+      <span class="sec-line"></span>
+      <span class="sec-note">Shopify + Chewy 45-day forecast</span>
+    </div>
+    <div id="po-kpis" class="po-kpi-row"></div>
+    <div class="po-card">
+      <div class="po-card-header">
+        <div class="po-card-title">Payout transactions</div>
+      </div>
+      <div class="po-tabs">
+        <button class="po-tab active" onclick="poSwitchView('all',this)">All</button>
+        <button class="po-tab" onclick="poSwitchView('weekly',this)">Weekly</button>
+        <button class="po-tab" onclick="poSwitchView('thisweek',this)">This week</button>
+        <button class="po-tab" onclick="poSwitchView('thismonth',this)">This month</button>
+      </div>
+      <div class="po-view active" id="po-view-all">
+        <table class="po-table"><thead><tr><th>Payout date</th><th>Channel</th><th class="po-desc-col">Description</th><th>Status</th><th>Amount</th></tr></thead><tbody id="po-tbl-all"></tbody></table>
+      </div>
+      <div class="po-view" id="po-view-weekly"><div id="po-weekly-content"></div></div>
+      <div class="po-view" id="po-view-thisweek">
+        <table class="po-table"><thead><tr><th>Payout date</th><th>Channel</th><th class="po-desc-col">Description</th><th>Status</th><th>Amount</th></tr></thead><tbody id="po-tbl-thisweek"></tbody></table>
+      </div>
+      <div class="po-view" id="po-view-thismonth">
+        <table class="po-table"><thead><tr><th>Payout date</th><th>Channel</th><th class="po-desc-col">Description</th><th>Status</th><th>Amount</th></tr></thead><tbody id="po-tbl-thismonth"></tbody></table>
+      </div>
+    </div>
+    <div class="po-card">
+      <div class="po-fc-hdr">
+        <svg width="18" height="21" viewBox="0 0 24 28"><path d="M12 1C6 1 2 4 2 4v12c0 6 10 11 10 11s10-5 10-11V4s-4-3-10-3z" fill="#351C15"/><path d="M12 3C7 3 4 5.5 4 5.5v10.5c0 5 8 9 8 9s8-4 8-9V5.5S17 3 12 3z" fill="#FFB500"/></svg>
+        <span class="po-card-title">Chewy 45-day forecast</span>
+      </div>
+      <div class="po-fc-sub">Invoice date + 45 days = payout date · Confirmed payouts have matching remittance emails</div>
+      <table class="po-table"><thead><tr><th>Payout date</th><th>Invoice date</th><th>Status</th><th class="po-desc-col">Est. orders</th><th>Amount</th></tr></thead><tbody id="po-forecast-body"></tbody></table>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -549,6 +690,7 @@
     else if (currentSection === 'shipping') loadShipping();
     else if (currentSection === 'breeding') loadBreeding();
     else if (currentSection === 'forecast') loadForecast();
+    else if (currentSection === 'payouts') loadPayouts();
   }
 
   // ============================================================
@@ -1097,6 +1239,220 @@
   (function init() {
     pickPreset('7d', document.querySelector('.dd-preset'));
   })();
+
+  // ═══════════════════════════════════════════════════
+  // PAYOUTS — Demo data (replace with API calls later)
+  // ═══════════════════════════════════════════════════
+  const PO_TODAY = new Date();
+  const PO_DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const poShopifyPayouts = [
+    {date:'2026-02-03',amount:986.83,status:'deposited',desc:'Jan 29 – Feb 1 transactions'},
+    {date:'2026-02-03',amount:-40.00,status:'withdrawn',desc:'Refund withdrawal'},
+    {date:'2026-02-04',amount:881.57,status:'deposited',desc:'Feb 2 transactions'},
+    {date:'2026-02-05',amount:698.98,status:'deposited',desc:'Feb 3 transactions'},
+    {date:'2026-02-06',amount:563.71,status:'deposited',desc:'Feb 4 transactions'},
+    {date:'2026-02-08',amount:19.28,status:'deposited',desc:'Feb 6 transactions'},
+    {date:'2026-02-09',amount:57.54,status:'deposited',desc:'Feb 7 transactions'},
+    {date:'2026-02-10',amount:3391.32,status:'deposited',desc:'Feb 6–8 transactions'},
+    {date:'2026-02-11',amount:734.17,status:'deposited',desc:'Feb 9 transactions'},
+    {date:'2026-02-11',amount:51.73,status:'deposited',desc:'Feb 10 transactions'},
+    {date:'2026-02-12',amount:301.27,status:'deposited',desc:'Feb 10 transactions'},
+    {date:'2026-02-13',amount:766.54,status:'deposited',desc:'Feb 11 transactions'},
+    {date:'2026-02-17',amount:216.94,status:'deposited',desc:'Feb 12 transactions'},
+    {date:'2026-02-18',amount:3885.87,status:'deposited',desc:'Feb 13–16 transactions'},
+    {date:'2026-02-19',amount:1377.94,status:'deposited',desc:'Feb 17 transactions'},
+    {date:'2026-02-20',amount:367.38,status:'scheduled',desc:'Feb 18 transactions'},
+    {date:'2026-02-23',amount:850,status:'forecast',desc:'Est. Feb 19–20 txns'},
+    {date:'2026-02-24',amount:620,status:'forecast',desc:'Est. Feb 21–22 txns'},
+    {date:'2026-02-25',amount:710,status:'forecast',desc:'Est. Feb 23 txns'},
+    {date:'2026-02-26',amount:680,status:'forecast',desc:'Est. Feb 24 txns'},
+    {date:'2026-02-27',amount:590,status:'forecast',desc:'Est. Feb 25 txns'},
+    {date:'2026-03-02',amount:740,status:'forecast',desc:'Est. Feb 26 txns'},
+    {date:'2026-03-03',amount:810,status:'forecast',desc:'Est. Feb 27–28 txns'},
+    {date:'2026-03-04',amount:650,status:'forecast',desc:'Est. Mar 1 txns'},
+    {date:'2026-03-05',amount:720,status:'forecast',desc:'Est. Mar 2 txns'},
+    {date:'2026-03-06',amount:580,status:'forecast',desc:'Est. Mar 3 txns'},
+  ];
+
+  const poChewyPayouts = [
+    {date:'2026-02-12',amount:556.38,status:'deposited',desc:'81 orders · Dec 29 + Feb 3',items:81,docDate:'12/29 + 2/3'},
+    {date:'2026-02-17',amount:6.92,status:'deposited',desc:'1 order · Dec 31',items:1,docDate:'12/31'},
+    {date:'2026-02-19',amount:994.67,status:'deposited',desc:'116 orders · Jan 5',items:116,docDate:'1/5'},
+    {date:'2026-02-20',amount:185.13,status:'scheduled',desc:'22 orders · Jan 6',items:22,docDate:'1/6'},
+    {date:'2026-02-21',amount:210,status:'forecast',desc:'~30 orders · Jan 7',items:30,docDate:'1/7'},
+    {date:'2026-02-22',amount:195,status:'forecast',desc:'~28 orders · Jan 8',items:28,docDate:'1/8'},
+    {date:'2026-02-23',amount:240,status:'forecast',desc:'~35 orders · Jan 9',items:35,docDate:'1/9'},
+    {date:'2026-02-24',amount:180,status:'forecast',desc:'~26 orders · Jan 10',items:26,docDate:'1/10'},
+    {date:'2026-02-25',amount:275,status:'forecast',desc:'~40 orders · Jan 11',items:40,docDate:'1/11'},
+    {date:'2026-02-26',amount:320,status:'forecast',desc:'~46 orders · Jan 12',items:46,docDate:'1/12'},
+    {date:'2026-02-27',amount:190,status:'forecast',desc:'~27 orders · Jan 13',items:27,docDate:'1/13'},
+    {date:'2026-02-28',amount:165,status:'forecast',desc:'~24 orders · Jan 14',items:24,docDate:'1/14'},
+    {date:'2026-03-01',amount:155,status:'forecast',desc:'~22 orders · Jan 15',items:22,docDate:'1/15'},
+    {date:'2026-03-02',amount:230,status:'forecast',desc:'~33 orders · Jan 16',items:33,docDate:'1/16'},
+    {date:'2026-03-03',amount:205,status:'forecast',desc:'~30 orders · Jan 17',items:30,docDate:'1/17'},
+    {date:'2026-03-04',amount:190,status:'forecast',desc:'~27 orders · Jan 18',items:27,docDate:'1/18'},
+    {date:'2026-03-05',amount:260,status:'forecast',desc:'~38 orders · Jan 19',items:38,docDate:'1/19'},
+    {date:'2026-03-06',amount:215,status:'forecast',desc:'~31 orders · Jan 20',items:31,docDate:'1/20'},
+  ];
+
+  function poGetAll(){
+    const all=[];
+    poShopifyPayouts.forEach(p=>all.push({...p,channel:'shopify'}));
+    poChewyPayouts.forEach(p=>all.push({...p,channel:'chewy'}));
+    return all.sort((a,b)=>b.date.localeCompare(a.date)||b.amount-a.amount);
+  }
+  function poFmt(n){const a=Math.abs(n),s=a.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});return n<0?'-$'+s:'$'+s;}
+  function poFmtShort(n){if(Math.abs(n)>=1000)return '$'+(n/1000).toFixed(1)+'k';return '$'+Math.round(n);}
+  function poParseDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+  function poDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function poLongDate(s){return poParseDate(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+  function poShortDate(s){return poParseDate(s).toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+  function poIsToday(s){return s===poDateStr(PO_TODAY);}
+  function poIsConfirmed(p){return p.status==='deposited'||p.status==='scheduled';}
+  function poIsEstimated(p){return p.status==='forecast';}
+  function poGetMonday(d){const dt=new Date(d);const day=dt.getDay();dt.setDate(dt.getDate()-(day===0?6:day-1));dt.setHours(0,0,0,0);return dt;}
+
+  function poStatusBadge(s){
+    const m={deposited:'<span class="po-st po-st-dep">Deposited</span>',scheduled:'<span class="po-st po-st-sch">Scheduled</span>',forecast:'<span class="po-st po-st-est">~Estimated</span>',withdrawn:'<span class="po-st po-st-wd">Withdrawn</span>'};
+    return m[s]||s;
+  }
+  function poChannelBadge(ch){
+    return ch==='chewy'?'<span class="po-ch po-ch-chewy">Chewy</span>':'<span class="po-ch po-ch-shopify">Shopify</span>';
+  }
+  function poAmountCell(p){
+    let cls='',pre='';
+    if(p.amount<0)cls=' neg';else if(poIsEstimated(p)){cls=' est';pre='~';}
+    return `<td class="po-amt${cls}">${pre}${poFmt(p.amount)}<span class="cur">USD</span></td>`;
+  }
+
+  function poRenderSummary(){
+    const all=poGetAll();
+    const monday=poGetMonday(PO_TODAY);
+    const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+    let wtd=0,weekConfirmed=0,weekEstimated=0,pendingChewy=0,upcomingShopify=0;
+    all.forEach(p=>{
+      if(p.amount<=0)return;
+      const d=poParseDate(p.date);
+      if(d>=monday&&d<=sunday){
+        if(poIsConfirmed(p))weekConfirmed+=p.amount;
+        if(poIsEstimated(p))weekEstimated+=p.amount;
+        if(d<=PO_TODAY&&poIsConfirmed(p))wtd+=p.amount;
+      }
+      if(p.channel==='shopify'&&(p.status==='scheduled'||p.status==='forecast'))upcomingShopify+=p.amount;
+    });
+    poChewyPayouts.forEach(p=>{if(p.status==='scheduled'||p.status==='forecast')pendingChewy+=p.amount;});
+    const weekTotal=weekConfirmed+weekEstimated;
+    document.getElementById('po-kpis').innerHTML=`
+      <div class="kpi"><div class="kpi-label">Week-to-date deposited</div><div class="kpi-value" style="color:var(--po-green)">${poFmt(wtd)}</div><div class="kpi-sub">of ${poFmt(weekTotal)} expected this week</div></div>
+      <div class="kpi"><div class="kpi-label">This week total</div><div class="kpi-value">${poFmt(weekTotal)}</div><div class="kpi-sub"><span style="color:var(--po-green)">${poFmt(weekConfirmed)}</span> confirmed · <span style="color:var(--po-purple)">~${poFmt(weekEstimated)}</span> est</div></div>
+      <div class="kpi"><div class="kpi-label">Chewy pending</div><div class="kpi-value" style="color:var(--po-chewy)">${poFmt(pendingChewy)}</div><div class="kpi-sub">45-day net terms</div></div>
+      <div class="kpi"><div class="kpi-label">Shopify upcoming</div><div class="kpi-value" style="color:var(--po-shopify)">${poFmt(upcomingShopify)}</div><div class="kpi-sub">Scheduled + estimated</div></div>`;
+  }
+
+  function poRenderTableRows(tbodyId,payouts){
+    let h='';
+    payouts.forEach(p=>{
+      h+=`<tr><td class="po-date">${poLongDate(p.date)}</td><td>${poChannelBadge(p.channel)}</td><td class="po-desc-col" style="color:var(--text-2)">${p.desc}</td><td>${poStatusBadge(p.status)}</td>${poAmountCell(p)}</tr>`;
+    });
+    document.getElementById(tbodyId).innerHTML=h||'<tr><td colspan="5" style="text-align:center;color:var(--text-3);padding:30px">No payouts in this range</td></tr>';
+  }
+  function poRenderAllTable(){poRenderTableRows('po-tbl-all',poGetAll());}
+  function poRenderThisWeekTable(){
+    const m=poGetMonday(PO_TODAY),s=new Date(m);s.setDate(m.getDate()+6);
+    poRenderTableRows('po-tbl-thisweek',poGetAll().filter(p=>{const d=poParseDate(p.date);return d>=m&&d<=s;}));
+  }
+  function poRenderThisMonthTable(){
+    const s=new Date(PO_TODAY.getFullYear(),PO_TODAY.getMonth(),1),e=new Date(PO_TODAY.getFullYear(),PO_TODAY.getMonth()+1,0);
+    poRenderTableRows('po-tbl-thismonth',poGetAll().filter(p=>{const d=poParseDate(p.date);return d>=s&&d<=e;}));
+  }
+
+  function poRenderWeekly(){
+    const all=poGetAll().filter(p=>p.amount>0);
+    const thisMonday=poGetMonday(PO_TODAY);
+    let html='<div class="po-week-grid">';
+    for(let w=-1;w<=2;w++){
+      const monday=new Date(thisMonday);monday.setDate(thisMonday.getDate()+(w*7));
+      const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+      const isCurrent=w===0;
+      const label=w===-1?'Last week':w===0?'This week':w===1?'Next week':'In 2 weeks';
+      const wp=all.filter(p=>{const d=poParseDate(p.date);return d>=monday&&d<=sunday;});
+      let confirmed=0,estimated=0,wtd=0,chewyT=0,shopifyT=0;
+      wp.forEach(p=>{
+        if(poIsConfirmed(p))confirmed+=p.amount;else if(poIsEstimated(p))estimated+=p.amount;
+        if(isCurrent&&poParseDate(p.date)<=PO_TODAY&&poIsConfirmed(p))wtd+=p.amount;
+        if(p.channel==='chewy')chewyT+=p.amount;else shopifyT+=p.amount;
+      });
+      const total=confirmed+estimated;
+      const cPct=total>0?(confirmed/total*100):0;
+      const ePct=total>0?(estimated/total*100):0;
+      const wtdPct=total>0?(wtd/total*100):0;
+      const days=[];
+      for(let i=0;i<7;i++){const dd=new Date(monday);dd.setDate(monday.getDate()+i);const ds=poDateStr(dd);const dp=wp.filter(p=>p.date===ds);let dc=0,de=0;dp.forEach(p=>{if(poIsConfirmed(p))dc+=p.amount;else if(poIsEstimated(p))de+=p.amount;});days.push({ds,dd,dp,dc,de,total:dc+de});}
+      html+=`<div class="po-wk${isCurrent?' current':''}">
+        <div class="po-wk-label">${label}${isCurrent?'<span class="now-badge">Now</span>':''}</div>
+        <div class="po-wk-range">${poShortDate(poDateStr(monday))} – ${poShortDate(poDateStr(sunday))}</div>
+        <div class="po-wk-total">${poFmt(total)}</div>
+        <div class="po-wk-split">
+          <div class="po-wk-split-item"><div class="po-wk-split-dot" style="background:var(--po-green)"></div><span class="po-wk-split-lbl">Confirmed</span><span class="po-wk-split-val" style="color:var(--po-green)">${poFmt(confirmed)}</span></div>
+          <div class="po-wk-split-item"><div class="po-wk-split-dot" style="background:var(--po-purple)"></div><span class="po-wk-split-lbl">Estimated</span><span class="po-wk-split-val" style="color:var(--po-purple)">~${poFmt(estimated)}</span></div>
+        </div>
+        <div class="po-bar-track">
+          <div class="po-bar-conf" style="width:${cPct.toFixed(1)}%"></div>
+          <div class="po-bar-est" style="left:${cPct.toFixed(1)}%;width:${ePct.toFixed(1)}%"></div>
+          ${isCurrent?`<div class="po-bar-wtd" style="left:${wtdPct.toFixed(1)}%" title="WTD: ${poFmt(wtd)}"></div>`:''}
+        </div>
+        ${isCurrent?`<div class="po-bar-note"><b>${wtdPct.toFixed(0)}%</b> deposited · ${poFmt(wtd)} WTD</div>`:''}
+        <div class="po-channels">
+          <div class="po-ch-bar"><div class="po-ch-bar-hdr">${poChannelBadge('shopify')}<span class="po-ch-bar-amt" style="color:var(--po-shopify)">${poFmt(shopifyT)}</span></div><div class="po-ch-bar-track"><div class="po-ch-bar-fill" style="width:${total>0?(shopifyT/total*100).toFixed(0):0}%;background:var(--po-shopify)"></div></div></div>
+          <div class="po-ch-bar"><div class="po-ch-bar-hdr">${poChannelBadge('chewy')}<span class="po-ch-bar-amt" style="color:var(--po-chewy)">${poFmt(chewyT)}</span></div><div class="po-ch-bar-track"><div class="po-ch-bar-fill" style="width:${total>0?(chewyT/total*100).toFixed(0):0}%;background:var(--po-chewy)"></div></div></div>
+        </div>
+        <div class="po-days"><div class="po-day-hdr"><span>Day</span><span>Payouts</span><span>Confirmed</span><span>Estimated</span><span style="text-align:right">Total</span></div>`;
+      days.forEach(day=>{
+        const today=poIsToday(day.ds);const dn=PO_DOW[day.dd.getDay()];const dnum=day.dd.getDate();
+        html+=`<div class="po-day${today?' today':''}"><div class="po-day-name">${today?'<span class="td-dot"></span>':''}${dn} ${dnum}</div><div class="po-day-chips">`;
+        if(day.dp.length===0)html+='<span style="font-size:11px;color:var(--text-3)">—</span>';
+        day.dp.forEach(p=>{const cls=p.channel==='chewy'?'chewy':'shopify';const est=poIsEstimated(p)?'~':'';html+=`<span class="po-day-chip ${cls}">${est}${poFmtShort(p.amount)}</span>`;});
+        html+=`</div><div class="po-day-val conf">${day.dc>0?poFmt(day.dc):'<span style="color:var(--text-3)">—</span>'}</div><div class="po-day-val estv">${day.de>0?'<span style="color:var(--po-purple)">~'+poFmt(day.de)+'</span>':'<span style="color:var(--text-3)">—</span>'}</div><div class="po-day-val totv">${day.total>0?poFmt(day.total):'<span style="color:var(--text-3)">—</span>'}</div></div>`;
+      });
+      html+='</div></div>';
+    }
+    html+='</div>';
+    document.getElementById('po-weekly-content').innerHTML=html;
+  }
+
+  function poRenderForecast(){
+    const forecasts=poChewyPayouts.filter(p=>p.status==='scheduled'||p.status==='forecast');
+    let h='';
+    forecasts.forEach(p=>{
+      const est=poIsEstimated(p);
+      h+=`<tr><td class="po-date">${poLongDate(p.date)}</td><td style="color:var(--text-2)">${p.docDate}</td><td>${poStatusBadge(p.status)}</td><td class="po-desc-col" style="color:var(--text-2)">${p.items} items</td><td class="po-amt${est?' est':''}">${est?'~':''}${poFmt(p.amount)}<span class="cur">USD</span></td></tr>`;
+    });
+    const total=forecasts.reduce((s,p)=>s+p.amount,0);
+    const ct=forecasts.filter(poIsConfirmed).reduce((s,p)=>s+p.amount,0);
+    const et=forecasts.filter(poIsEstimated).reduce((s,p)=>s+p.amount,0);
+    h+=`<tr style="background:rgba(17,24,39,0.4)"><td colspan="4" style="font-weight:700;color:var(--text)">Total upcoming <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:8px"><span style="color:var(--po-green);font-weight:600">${poFmt(ct)}</span> confirmed + <span style="color:var(--po-purple);font-weight:600">~${poFmt(et)}</span> estimated</span></td><td class="po-amt" style="font-size:15px;font-weight:800">${poFmt(total)}<span class="cur">USD</span></td></tr>`;
+    document.getElementById('po-forecast-body').innerHTML=h;
+  }
+
+  function poSwitchView(view,el){
+    document.querySelectorAll('.po-view').forEach(v=>v.classList.remove('active'));
+    document.querySelectorAll('.po-tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('po-view-'+view).classList.add('active');
+    if(el)el.classList.add('active');
+  }
+
+  function loadPayouts(){
+    // TODO: Replace demo data with API calls:
+    // const res = await fetch('/dashboard/api/payouts/shopify');
+    // poShopifyPayouts = await res.json();
+    poRenderSummary();
+    poRenderAllTable();
+    poRenderWeekly();
+    poRenderThisWeekTable();
+    poRenderThisMonthTable();
+    poRenderForecast();
+  }
 </script>
 </body>
 </html>
