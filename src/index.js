@@ -12,6 +12,7 @@ const apiRoutes = require('./routes/api');
 const dashboardRoutes = require('./routes/dashboard');
 const dashboardApiRoutes = require('./routes/dashboard-api');
 const forecastApiRoutes = require('./routes/forecast-api');
+const payrollApiRoutes = require('./routes/payroll-api');
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use('/invoices', invoiceRoutes);
 app.use('/api', apiRoutes);
 app.use('/dashboard/api', dashboardApiRoutes);
 app.use('/dashboard/api/forecast', forecastApiRoutes);
+app.use('/dashboard/api/payroll', payrollApiRoutes);
 app.use('/dashboard', dashboardRoutes);
 
 // Manual trigger for tracking poll (useful for testing)
